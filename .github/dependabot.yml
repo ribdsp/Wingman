@@ -1,0 +1,45 @@
+# Dependency updates.
+#
+# Weekly, grouped, because a service whose job is to hold the brakes should not have
+# twelve open pull requests nobody reads. Go's standard library covers most of what
+# this service does; the dependency list is short on purpose and should stay that way.
+
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /goal-engine
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps arrive as one PR. A major bump comes on its own,
+      # because it needs reading.
+      go-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: docker
+    # The base images in goal-engine/Dockerfile. The Postgres image in
+    # deploy/docker-compose.yml is pinned by hand: a database major version is a
+    # migration, not a dependency bump.
+    directory: /goal-engine
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: chore

@@ -1,0 +1,108 @@
+name: Bug report
+description: Something in the goal engine behaves differently from what the docs say.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Two things before you start:
+
+        **Security issues do not belong here.** If this is exploitable, see
+        [SECURITY.md](https://github.com/ribdsp/wingman/blob/main/SECURITY.md) and
+        report it privately.
+
+        **Bugs in `core/` belong upstream.** `core/` is a fork of
+        [Rakazo](https://github.com/elie222/rakazo). If the problem is in the agent
+        runtime, the channels, or the sandbox, upstream will fix it for more people
+        than this repo can. Problems with *how Wingman talks to* core — the task
+        route, the shared secret, the trigger payload — are ours.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, and what the service did instead of what you expected.
+      placeholder: |
+        A goal 12% behind pace stayed at `noop` through four consecutive ticks.
+        docs/goal-engine.md says a goal outside the tolerance band triggers.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and where it says so
+      description: >
+        A link or quote from a doc, a comment, or a test. If the docs and the code
+        disagree, that is a bug in one of them and knowing which you read helps.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: >
+        Curl calls, a goal definition, a failing test — whatever you have. Anything
+        in `internal/domain` can be reproduced in a unit test with no database at
+        all, and a failing test is the fastest possible report.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: decisions
+    attributes:
+      label: What the engine recorded
+      description: >
+        Relevant output from `GET /v1/goals/:id`, `POST /v1/monitor/tick`, or
+        `GET /v1/audit`. **Redact your keys, DSNs, and anything commercially
+        sensitive** — the audit log carries real business numbers.
+      render: json
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: >
+        Tag or commit. The running service reports it in its first log line, and
+        `core/.wingman-core-ref` records which core you provisioned.
+      placeholder: v0.1.0, or 9f3a1c2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: how
+    attributes:
+      label: How are you running it
+      options:
+        - docker compose (deploy/docker-compose.yml)
+        - the binary directly
+        - go run, from source
+        - tests only
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration
+      description: >
+        The settings that bear on this — `TRIGGER_DRY_RUN`, `MONITOR_INTERVAL`,
+        `METRIC_MAX_SAMPLE_AGE`, the goal's tolerance and cooldown, the metric's
+        source. **No secrets.**
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have removed every key, secret, DSN and password from the text above
+          required: true
+        - label: This is not a security vulnerability (those go through SECURITY.md)
+          required: true

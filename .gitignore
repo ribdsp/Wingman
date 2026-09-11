@@ -1,0 +1,64 @@
+# ---- Secrets / environment ----------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!**/testdata/**/*.key
+secrets/
+keys/
+
+# ---- Rakazo fork (own git repo, provisioned by scripts/fork-core.sh) ----
+core/
+
+# ---- Private product documents -------------------------------------------
+# The original PRD names products, people and infrastructure that are nobody
+# else's business. Its public, redacted equivalent is docs/motivation.md, and
+# that is the one to keep in step with the code.
+PRD.md
+
+# ---- Go ------------------------------------------------------------------
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+vendor/
+
+# ---- Node / TypeScript ---------------------------------------------------
+node_modules/
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Docker / runtime volumes -------------------------------------------
+deploy/data/
+deploy/volumes/
+*.pid
+*.log
+
+# ---- OS / editor ---------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~
+
+# ---- Local agent scratch space ------------------------------------------
+.claude/settings.local.json
+tmp/
+scratch/

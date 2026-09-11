@@ -1,0 +1,77 @@
+# Metric definitions for the Wingman goal engine.
+#
+# This file is owned by the operator and read once at startup. There is no API
+# that writes it, and that is the point: a metric definition can carry a SQL
+# query and the name of an environment variable holding a database password, so
+# an agent that could add one could read anything the goal engine can reach.
+#
+# A goal may only be measured on a metric declared here. Three sources exist:
+#
+#   push  the engine is told the value  (POST /v1/metrics/<key>/samples)
+#   sql   the engine reads it from a database it has a read-only DSN for
+#   http  the engine fetches it from a JSON endpoint
+#
+# The metrics below are push, so this file works on a fresh clone with no extra
+# environment. Switch one to sql or http when you have a database or an endpoint
+# to point it at — the commented examples at the bottom are complete.
+#
+# Keys are lowercase segments separated by . _ or - and are permanent: goals,
+# evaluations and the stored time series all reference them.
+
+metrics:
+  - key: business.mrr
+    description: Monthly recurring revenue, as reported by billing
+    unit: IDR
+    source: push
+
+  - key: business.signups
+    description: New paid signups in the current period
+    unit: count
+    source: push
+
+  - key: ops.open_tickets
+    description: Support tickets still open
+    unit: count
+    source: push
+
+# ---------------------------------------------------------------------------
+# A metric the engine reads for itself, from a database.
+#
+# The DSN never appears in this file — only the name of the variable holding it,
+# so the file is safe to commit. Use a read-only role: the query below is checked
+# to be a single read, but the database is what actually enforces that.
+#
+# The query must return exactly one row with one numeric column.
+# ---------------------------------------------------------------------------
+# datasources:
+#   - name: billing
+#     driver: postgres
+#     dsnEnv: METRIC_DSN_BILLING
+#     maxOpenConns: 4
+#
+# metrics:
+#   - key: billing.mrr
+#     description: Monthly recurring revenue
+#     unit: IDR
+#     source: sql
+#     datasource: billing
+#     query: |
+#       SELECT COALESCE(SUM(amount), 0)
+#       FROM subscriptions
+#       WHERE status = 'active'
+#
+# ---------------------------------------------------------------------------
+# A metric the engine fetches over HTTP.
+#
+# jsonPath is a dotted path into the response body; "items.0.value" indexes an
+# array. Credentials come from the environment, like a DSN.
+# ---------------------------------------------------------------------------
+#   - key: analytics.signups
+#     description: Signups today, from the analytics API
+#     unit: count
+#     source: http
+#     method: GET
+#     url: https://analytics.internal.example/api/metrics/signups
+#     jsonPath: data.today.count
+#     authHeader: Authorization
+#     authValueEnv: METRIC_AUTH_ANALYTICS

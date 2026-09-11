@@ -1,0 +1,106 @@
+# Wingman — self-hosted stack.
+#
+#   cd deploy
+#   cp ../goal-engine/.env.example .env     # then fill it in
+#   docker compose up -d --build
+#
+# What this file starts is the goal engine and its database. Wingman core — the
+# Rakazo fork — is a separate service with its own compose file, provisioned by
+# scripts/fork-core.sh; the commented block at the bottom joins the two.
+#
+# Two deliberate choices worth reading before you deploy this on a VPS:
+#
+#   Published ports are bound to 127.0.0.1. Docker writes its own iptables rules
+#   and a plain "ports: 8080:8080" would reach the internet through a ufw that
+#   says otherwise. Put a reverse proxy in front and set TRUSTED_PROXIES.
+#
+#   The database password has no default. Compose refuses to start without one
+#   rather than fall back to something guessable.
+
+name: wingman
+
+services:
+  goal-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wingman_goals}
+      POSTGRES_USER: ${POSTGRES_USER:-wingman}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      # Comparisons and sorting stay deterministic across host locales.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - goal-db-data:/var/lib/postgresql/data
+    # Not published. Uncomment to reach it with psql from this host only:
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+    healthcheck:
+      # The goal engine applies migrations on boot, so it must not start until the
+      # database can actually answer.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wingman} -d ${POSTGRES_DB:-wingman_goals}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  goal-engine:
+    build:
+      context: ../goal-engine
+      args:
+        VERSION: ${WINGMAN_VERSION:-dev}
+    image: wingman/goal-engine:${WINGMAN_VERSION:-dev}
+    restart: unless-stopped
+    depends_on:
+      goal-db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Set here, not in .env: inside this network the database is "goal-db", and a
+      # DATABASE_URL copied from a developer's machine would point at a localhost
+      # that means the container itself.
+      DATABASE_URL: postgres://${POSTGRES_USER:-wingman}:${POSTGRES_PASSWORD}@goal-db:5432/${POSTGRES_DB:-wingman_goals}?sslmode=disable
+      PORT: "8080"
+    ports:
+      - "127.0.0.1:${GOAL_ENGINE_PORT:-8080}:8080"
+    volumes:
+      # Your metrics and spending limits, read-only: the service has no reason to
+      # write to either file, and an agent that could would be setting its own
+      # limits.
+      - ../goal-engine/config:/app/config:ro
+    # The image declares this same probe; it is repeated here so the timings are
+    # visible where the stack is, and given a long start period because a cold
+    # database has migrations to apply before the service answers.
+    healthcheck:
+      test: ["CMD", "/app/goal-engine", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+volumes:
+  goal-db-data:
+
+# ---------------------------------------------------------------------------
+# Wingman core (the Rakazo fork).
+#
+# scripts/fork-core.sh clones your fork into ../core, which brings its own compose
+# file, its own database and its own environment. Run it as its own stack and let
+# the two talk over a shared network:
+#
+#   docker network create wingman-net
+#
+# then add to both stacks:
+#
+#   networks:
+#     default:
+#       name: wingman-net
+#       external: true
+#
+# and point the goal engine at it in deploy/.env:
+#
+#   WINGMAN_CORE_BASE_URL=http://core:3000
+#
+# Keep TRIGGER_DRY_RUN=true until you have watched a week of what the engine wants
+# to do. The audit log fills up either way; only the tasks stop.
+# ---------------------------------------------------------------------------

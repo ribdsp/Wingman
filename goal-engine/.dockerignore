@@ -1,0 +1,36 @@
+# What never enters the build context.
+#
+# The first three entries are the ones that matter: a filled-in .env or a local
+# key would otherwise be copied into an image layer, where deleting it later does
+# not remove it.
+
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+.git
+.gitignore
+.dockerignore
+Dockerfile
+Makefile
+
+# Build output and coverage artifacts belong to the host, not the image.
+bin/
+*.exe
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Tests are not compiled in the image; they run in CI and on the host.
+**/*_test.go
+**/testdata/
+
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+tmp/
+scratch/

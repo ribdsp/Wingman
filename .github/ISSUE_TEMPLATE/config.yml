@@ -1,0 +1,20 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/ribdsp/wingman/security/advisories/new
+    about: >
+      Report privately, never as an issue. See SECURITY.md for the threat model and
+      what is in scope.
+
+  - name: A bug in core (the agent runtime)
+    url: https://github.com/elie222/rakazo/issues
+    about: >
+      core/ is a fork of Rakazo. Bugs in the agent loop, channels, tools or sandbox
+      belong upstream, where a fix reaches everyone. How Wingman talks to core is
+      ours — file that here.
+
+  - name: Documentation
+    url: https://github.com/ribdsp/wingman/tree/main/docs
+    about: >
+      architecture, the goal model, the API, deployment, forking, and the roadmap.
+      A doc that contradicts the code is a bug worth filing.

@@ -1,0 +1,85 @@
+name: Feature or change proposal
+description: Propose something the goal engine should do, or a default it should change.
+labels: [proposal]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The goal engine is deliberately small, and
+        [the roadmap](https://github.com/ribdsp/wingman/blob/main/docs/roadmap.md#deliberately-absent)
+        lists things that are absent on purpose rather than by omission. That does
+        not mean the list is closed — it means reversing one takes an argument.
+
+        The most useful proposals name a **failure** rather than a feature.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of change is this
+      options:
+        - New capability
+        - Changing a safety default (cooldown, tolerance, caps, TTL, staleness)
+        - Changing the order of a decision ladder
+        - Reversing something on the "deliberately absent" list
+        - Developer experience (tests, tooling, CI)
+        - Documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >
+        What went wrong, or what you could not do. Concrete beats general — "a goal
+        on a metric that updates once a day triggers every morning and never in the
+        afternoon" is actionable in a way that "tolerance handling needs work" is not.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: What should change, and roughly where.
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure
+    attributes:
+      label: What failure does this prevent, and what does it allow
+      description: >
+        Every limit in this project exists because of something it prevents. If you
+        are loosening one, say which failure you are accepting; if you are tightening
+        one, say which you are buying. A change that makes the agent more autonomous
+        should be explicit about that.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried, or considered instead
+      description: >
+        Configuration you changed, another design you rejected. If the current
+        behaviour is documented with a reason, argue with that reason here — it is
+        written down to be argued with.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Does this touch any of these
+      description: >
+        Tick anything that applies. Ticking a box is not a problem — it means the
+        discussion needs to happen before the code does.
+      options:
+        - label: An agent could do something with it that it currently cannot
+        - label: It would let a limit change without a restart
+        - label: It adds an API that writes a metric definition or a spending policy
+        - label: It changes who may engage or release the kill switch
+        - label: It adds a way to modify or delete an audit row
+        - label: It changes what happens when something cannot be read
+        - label: None of the above

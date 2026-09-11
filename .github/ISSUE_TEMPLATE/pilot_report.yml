@@ -1,0 +1,111 @@
+name: Pilot report
+description: You ran this against a real metric. This is the most useful thing you can file.
+labels: [pilot-report]
+title: "Pilot report: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        [The roadmap](https://github.com/ribdsp/wingman/blob/main/docs/roadmap.md)
+        says a pilot report is worth more than any patch, and it means it. Every
+        default in this project — the 6h cooldown, the 5% tolerance, 5 triggers a
+        period, 26h staleness — is a guess made without production data. You have
+        the data.
+
+        **Nobody will be blamed for a bad outcome they reported.** If it did
+        something expensive or wrong, that is exactly the report this project needs
+        most, and saying so plainly is a contribution.
+
+        **Redact freely.** Relative numbers ("12% behind pace", "triggered 9 times
+        in a month") are as useful as absolute ones. Do not publish your revenue to
+        help us tune a default.
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: What you ran it on
+      description: >
+        How many goals, on what kind of metrics, over how long. Metric source —
+        push, sql, http — and how often the underlying number actually moves.
+      placeholder: |
+        3 goals on one product, 6 weeks. Two push metrics fed nightly by a billing
+        job, one http metric polled hourly. Monitor interval 1h.
+    validations:
+      required: true
+
+  - type: textarea
+    id: decisions
+    attributes:
+      label: What it decided
+      description: >
+        Roughly how the decisions broke down, and how many triggers you got. The
+        tick response and the audit log both aggregate this.
+      placeholder: |
+        ~1000 evaluations. 9 triggers, 4 of them for the same goal in one week.
+        ~40 skipped_invalid_sample when the nightly job failed twice.
+    validations:
+      required: true
+
+  - type: textarea
+    id: judgement
+    attributes:
+      label: Were the triggers right
+      description: >
+        The question the whole project turns on. Of the times it woke an agent, how
+        many were moments you would have wanted to know about? How many were noise?
+        Did it miss anything it should have caught?
+    validations:
+      required: true
+
+  - type: textarea
+    id: defaults
+    attributes:
+      label: Which defaults were wrong
+      description: >
+        Cooldown, tolerance, trigger budget, staleness window, approval TTL, monitor
+        interval. What did you change, and to what?
+      placeholder: |
+        Widened tolerance to 0.12 — the metric is noisy day to day and 0.05 was
+        triggering on ordinary variance. Cooldown 6h → 24h for the same reason.
+    validations:
+      required: true
+
+  - type: textarea
+    id: money
+    attributes:
+      label: The approval gate
+      description: >
+        Did you enable a spending policy? How many requests, how many auto-approved,
+        how many denied by a cap, how many expired unanswered? An expiry is a signal
+        the notification gap on the roadmap is real.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dryrun
+    attributes:
+      label: Dry run
+      description: >
+        How long did you leave `TRIGGER_DRY_RUN=true`, and did reading the recorded
+        decisions change how you defined your goals before you turned it off?
+    validations:
+      required: false
+
+  - type: textarea
+    id: wrong
+    attributes:
+      label: Anything expensive, wrong, or surprising
+      description: >
+        Including things that were your fault, or the goal's fault rather than the
+        engine's. "The goal was badly stated" is the failure mode a monitor cannot
+        fix, and knowing how often it happens is genuinely valuable.
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: v0.1.0, or a commit
+    validations:
+      required: true

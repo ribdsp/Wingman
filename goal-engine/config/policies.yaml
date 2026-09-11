@@ -1,0 +1,60 @@
+# Spending policies for the Wingman goal engine.
+#
+# This file is owned by the operator and read once at startup. There is no API
+# that writes it: an agent able to edit its own spending limits has no limits.
+#
+# Read the default carefully. An action type with NO policy here is not
+# unlimited — it requires a human every time. That is why this file ships empty:
+# until you write a limit down, nothing spends money without you.
+#
+# Each policy answers one question per request: approve it, ask a human, or refuse.
+#
+#   autoApproveBelow  under this amount, the action proceeds and is recorded
+#   dailyCap          total per action type per day; a request that would cross it
+#                     is refused, not queued
+#   hardCap           a single request above this is refused outright
+#   currency          the unit all three are in; requests in another are refused
+#   enabled           false refuses every request of this type
+#
+# The caps refuse rather than escalate on purpose. An operator asked to rubber-stamp
+# a cap breach will eventually rubber-stamp it, so raising a cap is a configuration
+# change you make deliberately, not an approval you click through at midnight. What
+# reaches a human is the middle band: at or above autoApproveBelow, still inside
+# both caps.
+#
+# autoApproveBelow must sit below both caps, or the caps would never be reached.
+# Amounts are plain numbers in the smallest unit you actually transact in — for
+# IDR that is rupiah, not sen.
+
+policies: []
+
+# ---------------------------------------------------------------------------
+# A worked example. Copy it, change the numbers to ones you would be willing to
+# lose to a bug, and remove the empty list above.
+#
+# These say: an ad spend under 100k rupiah proceeds on its own; between 100k and
+# the caps it waits for you; anything that would take the day past 500k, or any
+# single request above 5M, is refused outright.
+# ---------------------------------------------------------------------------
+# policies:
+#   - actionType: ads.spend
+#     description: Paid acquisition, topped up by the growth agent
+#     currency: IDR
+#     autoApproveBelow: 100000
+#     dailyCap: 500000
+#     hardCap: 5000000
+#
+#   - actionType: tools.subscription
+#     description: SaaS the agent signs up for on its own
+#     currency: IDR
+#     autoApproveBelow: 0        # nothing is hands-off; every request asks you
+#     dailyCap: 1000000
+#     hardCap: 1000000
+#
+#   - actionType: payout.vendor
+#     description: Paying a freelancer or vendor invoice
+#     currency: IDR
+#     autoApproveBelow: 0
+#     dailyCap: 10000000
+#     hardCap: 10000000
+#     enabled: false             # written down, and refused until you flip this

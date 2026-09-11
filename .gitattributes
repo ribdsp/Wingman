@@ -1,0 +1,34 @@
+# Line endings.
+#
+# Everything here runs on Linux: the container, the compose stack, CI, and the VPS
+# this is meant to be deployed on. A CRLF in scripts/fork-core.sh becomes
+# "bad interpreter: /usr/bin/env bash^M", and a CRLF in the Makefile breaks make —
+# both of which are confusing failures that appear only for contributors on Windows.
+#
+# So the repository normalises to LF and checks out LF everywhere, regardless of a
+# developer's core.autocrlf.
+
+* text=auto eol=lf
+
+# Files where a CRLF is not a style question but a broken file.
+*.sh        text eol=lf
+Makefile    text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.sql       text eol=lf
+.env.example text eol=lf
+
+# Binary, never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+
+# Generated or vendored: kept out of diffs and out of language statistics.
+go.sum       -diff linguist-generated
+docs/**      linguist-documentation

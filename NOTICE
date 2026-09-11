@@ -1,0 +1,23 @@
+Wingman
+Copyright 2026 The Wingman Authors
+
+This product includes software developed as part of the Rakazo project
+(https://github.com/elie222/rakazo), licensed under the Apache License,
+Version 2.0.
+
+Portions of Wingman are a derivative work of Rakazo. The Wingman "core"
+component is maintained as a fork of Rakazo and carries Rakazo's original
+copyright notices. See docs/fork-and-rebrand.md for how the fork is created
+and kept in sync with upstream.
+
+Modifications made by the Wingman Authors relative to upstream Rakazo:
+  - Product rebrand (name, logo, UI strings) from "Rakazo" to "Wingman".
+  - Addition of a goal-driven autonomy layer (goal registry, business metric
+    monitor, trigger bridge, approval threshold policy, business audit log)
+    implemented as a separate Go service in goal-engine/.
+  - Self-hosted deployment manifests in deploy/.
+
+Trademark notice: "Wingman" is the name of this project. "Rakazo" and "Grok"
+are the marks of their respective owners and are referenced here only to
+describe technical lineage and interoperability. Use of those marks does not
+imply endorsement.
