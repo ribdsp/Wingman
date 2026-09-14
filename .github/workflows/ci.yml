@@ -42,9 +42,9 @@ jobs:
       run:
         working-directory: ${{ matrix.module }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           # Single source of truth: bump the module's go.mod, not this file.
           go-version-file: ${{ matrix.module }}/go.mod
@@ -92,7 +92,7 @@ jobs:
       - name: Verify the migrations directory is not empty
         run: test -n "$(ls -A migrations)"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           # Per module, because two legs uploading "coverage" is an error.
@@ -107,9 +107,9 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # Matches the runtime in web/Dockerfile. Bump both together.
           node-version: 22
@@ -155,14 +155,14 @@ jobs:
     # then delete this comment and the continue-on-error below.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: ${{ matrix.module }}/go.mod
           cache-dependency-path: ${{ matrix.module }}/go.sum
 
-      - uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v9
         with:
           version: latest
           working-directory: ${{ matrix.module }}
@@ -171,7 +171,7 @@ jobs:
     name: Containers and compose
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build all three images
         run: |
