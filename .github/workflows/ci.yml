@@ -142,18 +142,12 @@ jobs:
         run: npm run build
 
   lint:
-    name: Lint (${{ matrix.module }}, advisory)
+    name: Lint (${{ matrix.module }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         module: [goal-engine, core]
-    # Advisory on purpose, for now. golangci-lint's standard set flags patterns this
-    # codebase uses deliberately (unchecked `defer tx.Rollback()`, for one), and a
-    # red pipeline that everybody learns to ignore is worse than an amber one they
-    # read. Triage the findings, add the exclusions that are genuinely intended,
-    # then delete this comment and the continue-on-error below.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -162,9 +156,17 @@ jobs:
           go-version-file: ${{ matrix.module }}/go.mod
           cache-dependency-path: ${{ matrix.module }}/go.sum
 
-      - uses: golangci/golangci-lint-action@v6
+      # v9 and not v6: the v6 action installs a linter built against an older Go, and
+      # golangci-lint refuses to load a module whose go directive is newer than its own
+      # toolchain. Under v6 this job never linted anything — it exited 3 with "the Go
+      # language version used to build golangci-lint is lower than the targeted Go
+      # version" on every run, which continue-on-error then hid.
+      - uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          # Pinned, not `latest`. The findings are the gate now, and `latest` means a
+          # linter release can turn main red with no commit behind it. Bumping this is a
+          # deliberate edit: read the new findings, then move the pin.
+          version: v2.13.2
           working-directory: ${{ matrix.module }}
 
   container:

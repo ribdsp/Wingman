@@ -85,8 +85,11 @@ func TestHashToken_isStableAndDistinguishing(t *testing.T) {
 
 	// Act & Assert
 	// Stable, because the hash is recomputed on every authenticated request and has
-	// to land on the row written at sign-in.
-	if HashToken(first) != HashToken(first) {
+	// to land on the row written at sign-in. Bound to two variables rather than
+	// compared inline: HashToken(first) != HashToken(first) reads to a linter, and to
+	// a person skimming, as a typo for two different inputs.
+	atSignIn, atNextRequest := HashToken(first), HashToken(first)
+	if atSignIn != atNextRequest {
 		t.Error("hashing the same token twice gave two answers")
 	}
 	if HashToken(first) == HashToken(second) {

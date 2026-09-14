@@ -34,7 +34,13 @@ fmt: ## Format every Go file
 vet: ## Run go vet
 	$(GO) vet ./...
 
-lint: ## Run golangci-lint (install: https://golangci-lint.run)
+# CI runs golangci-lint at a pinned version and its findings gate the merge, so a
+# skipped run here is not a clean tree. One trap worth knowing before you trust the
+# output: golangci-lint refuses to load a module whose go directive is newer than the
+# Go it was itself built with, and exits without having linted anything. Install it
+# with a current toolchain —
+#   GOTOOLCHAIN=latest go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+lint: ## Run golangci-lint (build it with Go >= this module's go directive)
 	@command -v golangci-lint >/dev/null 2>&1 || { echo "golangci-lint is not installed; skipping"; exit 0; }
 	golangci-lint run ./...
 

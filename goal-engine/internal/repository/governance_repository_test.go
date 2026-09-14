@@ -105,7 +105,7 @@ func TestDispatchRepositoryCreateReportsADuplicateAsAConflict(t *testing.T) {
 	db, mock := newTestDB(t)
 	repo := NewDispatchRepository(db)
 	mock.ExpectQuery("INSERT INTO trigger_dispatches").
-		WillReturnError(&pq.Error{Code: pq.ErrorCode(pgUniqueViolation)})
+		WillReturnError(&pq.Error{Code: pgUniqueViolation})
 
 	_, err := repo.Create(context.Background(), testDispatch())
 	if !errors.Is(err, ErrConflict) {
@@ -424,10 +424,10 @@ func TestApprovalRepositoryResolveRecordsTheHumanDecision(t *testing.T) {
 	repo := NewApprovalRepository(db)
 	resolvedAt := time.Date(2026, 9, 11, 9, 0, 0, 0, time.UTC)
 	mock.ExpectQuery("WHERE id = \\$1 AND outcome = 'pending' AND resolution IS NULL").
-		WithArgs("approval-1", "approved", "ops", "ok, lanjut").
+		WithArgs("approval-1", "approved", "ops", "ok, go ahead").
 		WillReturnRows(addApprovalRow(approvalSQLRows(), "pending", "approved", "ops", resolvedAt))
 
-	record, err := repo.Resolve(context.Background(), "approval-1", ResolutionApproved, "ops", "ok, lanjut")
+	record, err := repo.Resolve(context.Background(), "approval-1", ResolutionApproved, "ops", "ok, go ahead")
 	if err != nil {
 		t.Fatalf("expected the request to be resolved, got %v", err)
 	}

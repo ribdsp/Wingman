@@ -108,7 +108,13 @@ flag is in the process list and in the shell history. To type it without echo:
 
 	// To stdout, so it can be captured. The id is what CORE_UNATTENDED_OWNER resolves to
 	// at boot, and the address is what the person signs in with.
-	fmt.Fprintf(os.Stdout, "created account %s for %s\n", user.ID, user.Email)
+	//
+	// The write is checked because this line is the only place the new id appears: a
+	// dropped stdout — a closed pipe, a full disk — would leave an account nobody can
+	// name. Saying which of the two happened is why the id is in the error as well.
+	if _, err := fmt.Fprintf(os.Stdout, "created account %s for %s\n", user.ID, user.Email); err != nil {
+		return fmt.Errorf("account %s was created but could not be reported: %w", user.ID, err)
+	}
 	return nil
 }
 

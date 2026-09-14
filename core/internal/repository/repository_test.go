@@ -9,6 +9,7 @@ import (
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/lib/pq/pqerror"
 )
 
 // newMock returns a pool backed by go-sqlmock and registers the expectation check.
@@ -34,8 +35,12 @@ func newMock(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock) {
 }
 
 // pgError builds a driver error carrying a PostgreSQL code, the way lib/pq reports one.
-func pgError(code string) error {
-	return &pq.Error{Code: pq.ErrorCode(code), Message: "test"}
+//
+// The parameter is a pqerror.Code rather than a string because pq.ErrorCode, the alias
+// that used to spell this, is deprecated in lib/pq v1.12 and marked //go:fix inline. The
+// pg* constants are untyped, so every call site is unchanged.
+func pgError(code pqerror.Code) error {
+	return &pq.Error{Code: code, Message: "test"}
 }
 
 // fixedNow is an arbitrary instant. No repository reads a clock — every timestamp is a
@@ -94,7 +99,7 @@ func TestClassify_leavesAnythingElseAlone(t *testing.T) {
 
 func TestIsConstraintViolation_separatesCallerFaultsFromOutages(t *testing.T) {
 	// Arrange
-	callerFaults := []string{
+	callerFaults := []pqerror.Code{
 		pgCheckViolation, pgForeignKeyViolation, pgNotNullViolation,
 		pgNumericValueOutRange, pgInvalidTextRepr,
 	}

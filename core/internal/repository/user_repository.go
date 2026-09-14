@@ -46,14 +46,11 @@ type userRow struct {
 	CreatedAt   time.Time `db:"created_at"`
 }
 
+// toUser is a conversion rather than a field-by-field literal on purpose: the two types
+// have to stay identical, and a conversion makes the compiler say so the moment one gains
+// a field the other lacks. The db tags are ignored by the conversion.
 func (r userRow) toUser() User {
-	return User{
-		ID:          r.ID,
-		Email:       r.Email,
-		DisplayName: r.DisplayName,
-		IsActive:    r.IsActive,
-		CreatedAt:   r.CreatedAt,
-	}
+	return User(r)
 }
 
 // Create records a new account.

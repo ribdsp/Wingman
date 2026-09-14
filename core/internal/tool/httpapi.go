@@ -126,7 +126,7 @@ func (h *HTTPAPI) Call(ctx context.Context, invocation Invocation) (Result, erro
 		// otherwise find it in this run's transcript, which is stored and rendered.
 		return Result{}, fmt.Errorf("http service %s: %s: %w", h.service.Name, declared.Name, redactURL(err, h.service.BaseURL))
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	// One more byte than the bound, so a body that is exactly at it is not reported as
 	// truncated and one over it is.

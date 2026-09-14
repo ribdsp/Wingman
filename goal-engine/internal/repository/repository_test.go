@@ -35,8 +35,8 @@ func TestClassifyMapsDriverErrorsOntoSentinels(t *testing.T) {
 		want error
 	}{
 		{"nil stays nil", nil, nil},
-		{"unique violation is a conflict", &pq.Error{Code: pq.ErrorCode(pgUniqueViolation)}, ErrConflict},
-		{"malformed uuid cannot match a row", &pq.Error{Code: pq.ErrorCode(pgInvalidTextRepr)}, ErrNotFound},
+		{"unique violation is a conflict", &pq.Error{Code: pgUniqueViolation}, ErrConflict},
+		{"malformed uuid cannot match a row", &pq.Error{Code: pgInvalidTextRepr}, ErrNotFound},
 	}
 
 	for _, tc := range cases {
@@ -56,7 +56,7 @@ func TestClassifyPassesThroughUnrelatedErrors(t *testing.T) {
 	}
 	// A check violation is a caller problem, not a missing row: it must not be
 	// flattened into ErrNotFound, or a bad request would answer 404.
-	checkErr := &pq.Error{Code: pq.ErrorCode(pgCheckViolation)}
+	checkErr := &pq.Error{Code: pgCheckViolation}
 	if got := classify(checkErr); errors.Is(got, ErrNotFound) || errors.Is(got, ErrConflict) {
 		t.Fatalf("expected a check violation to pass through, got %v", got)
 	}
@@ -68,11 +68,11 @@ func TestIsConstraintViolationSeparatesCallerErrorsFromOutages(t *testing.T) {
 		err  error
 		want bool
 	}{
-		{"check violation", &pq.Error{Code: pq.ErrorCode(pgCheckViolation)}, true},
-		{"foreign key violation", &pq.Error{Code: pq.ErrorCode(pgForeignKeyViolation)}, true},
-		{"not null violation", &pq.Error{Code: pq.ErrorCode(pgNotNullViolation)}, true},
-		{"numeric out of range", &pq.Error{Code: pq.ErrorCode(pgNumericValueOutRange)}, true},
-		{"unique violation is a conflict, not a bad request", &pq.Error{Code: pq.ErrorCode(pgUniqueViolation)}, false},
+		{"check violation", &pq.Error{Code: pgCheckViolation}, true},
+		{"foreign key violation", &pq.Error{Code: pgForeignKeyViolation}, true},
+		{"not null violation", &pq.Error{Code: pgNotNullViolation}, true},
+		{"numeric out of range", &pq.Error{Code: pgNumericValueOutRange}, true},
+		{"unique violation is a conflict, not a bad request", &pq.Error{Code: pgUniqueViolation}, false},
 		{"plain error", errors.New("timeout"), false},
 		{"nil", nil, false},
 	}

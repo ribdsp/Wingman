@@ -42,7 +42,15 @@ gofmt -l ./cmd/ ./internal/      # must print nothing
 go vet ./...
 go test -coverprofile=coverage.out -covermode=atomic ./...
 go tool cover -func=coverage.out | tail -1
+"$(go env GOPATH)/bin/golangci-lint" run --timeout=10m   # not the one on PATH
 ```
+
+CI gates on golangci-lint at a **pinned `v2.13.2`**, standard linter set, no
+`.golangci.yml` in either module. Both currently report `0 issues.` The full path is
+not decoration: the `golangci-lint` on PATH here is built with go1.25 and refuses to
+load a module whose `go` directive is newer, exiting 3 without linting a line — which
+is exactly how the CI job managed to lint nothing for the whole life of the workflow.
+The one under `GOPATH/bin` was rebuilt with go1.26.8 and works.
 
 A change to one module still needs the other's suite run: they share no code, but
 `goal-engine/internal/core/client.go` and core's task route are a contract.

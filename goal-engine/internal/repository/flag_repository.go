@@ -44,14 +44,11 @@ type flagRow struct {
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
+// toFlag is a conversion rather than a field-by-field literal on purpose: the two types
+// have to stay identical, and a conversion makes the compiler say so the moment one gains
+// a field the other lacks. The db tags are ignored by the conversion.
 func (r flagRow) toFlag() Flag {
-	return Flag{
-		Key:       r.Key,
-		Enabled:   r.Enabled,
-		Reason:    r.Reason,
-		UpdatedBy: r.UpdatedBy,
-		UpdatedAt: r.UpdatedAt,
-	}
+	return Flag(r)
 }
 
 // Get returns one flag, or ErrNotFound.

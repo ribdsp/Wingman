@@ -234,7 +234,9 @@ func runProcess(ctx context.Context, dir string, argv, env []string) (ExecResult
 		if result.ExitCode < 0 {
 			// Signalled rather than exited, and os/exec reports that as -1.
 			result.ExitCode = signalExitCode
-			result.Stderr = appendLine(result.Stderr, fmt.Sprintf("[killed: %s]", exit.ProcessState.String()))
+			// exit.String() is the promoted ProcessState.String(), which names the
+			// signal — "signal: killed" — rather than repeating the exit code.
+			result.Stderr = appendLine(result.Stderr, fmt.Sprintf("[killed: %s]", exit.String()))
 		}
 		return result, nil
 	}

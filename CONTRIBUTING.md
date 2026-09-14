@@ -82,8 +82,21 @@ read -rs PW && printf '%s' "$PW" | make createuser EMAIL=you@example.com NAME="Y
 | `make test` | The suite. |
 | `make test-race` | Under the race detector. Needs cgo and a C toolchain; CI runs it on every push, so nothing merges unraced. |
 | `make cover` | Coverage, with the total printed. |
-| `make fmt vet lint` | Formatting, vet, and golangci-lint if you have it. |
+| `make fmt vet lint` | Formatting, vet, and golangci-lint. |
 | `make build` | A stamped static binary into `bin/`. |
+
+CI runs golangci-lint at a pinned version and its findings gate the merge, so `lint`
+is not advisory. The target skips silently when the linter is absent, and — the trap
+this pipeline itself fell into for a while — a golangci-lint built against an older Go
+than the module's `go` directive exits without having linted anything. If you install
+it, install it with a current toolchain:
+
+```bash
+GOTOOLCHAIN=latest go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+```
+
+Neither module has a `.golangci.yml`: the standard linter set passes as written, and
+an exclusion nobody needs is an exclusion nobody notices growing.
 
 On Windows, `make` is often absent and every target is one `go` command — read the
 Makefile and run the line you need.

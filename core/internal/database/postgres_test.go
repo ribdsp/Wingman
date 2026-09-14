@@ -179,7 +179,7 @@ func TestMigrate_unreachableDatabase_reportsTheDriver(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	err = Migrate(db, "migrations")
 

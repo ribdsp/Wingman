@@ -160,7 +160,7 @@ func TestAPushGoalCapturesItsBaselineFromTheReportedValue(t *testing.T) {
 	// A goal created before anything was reported still needs a starting point, and
 	// it has to come from the same place every later reading does.
 	goal := testGoal()
-	goal.Goal.BaselineValue = nil
+	goal.BaselineValue = nil
 	f := newPushFixture(t, reportedValue(30), goal)
 
 	result, err := f.monitor.Tick(context.Background())

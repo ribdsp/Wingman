@@ -137,7 +137,10 @@ func shellResult(executed ExecResult) Result {
 		}
 		// Always stated for a failure, even when the command printed nothing at all —
 		// otherwise a silent failure and a silent success look identical.
-		content.WriteString(fmt.Sprintf("[exit status %d]", executed.ExitCode))
+		//
+		// The error is discarded because strings.Builder never returns one, which is
+		// why the WriteString calls above do not check theirs either.
+		_, _ = fmt.Fprintf(&content, "[exit status %d]", executed.ExitCode)
 	}
 
 	return Result{Content: content.String(), IsError: executed.ExitCode != 0}
