@@ -52,6 +52,9 @@ type ApprovalsDeps struct {
 
 	// TTL overrides DefaultApprovalTTL.
 	TTL time.Duration
+	// Notices tells a human that a request is waiting. Optional: nil is the
+	// NOTIFY_ENABLED=false case and the gate decides identically without it.
+	Notices *Notices
 	// Clock defaults to time.Now.
 	Clock  Clock
 	Logger zerolog.Logger
@@ -68,6 +71,7 @@ type Approvals struct {
 	flags     FlagStore
 	audit     AuditSink
 	ttl       time.Duration
+	notices   *Notices
 	clock     Clock
 	log       zerolog.Logger
 }
@@ -96,6 +100,7 @@ func NewApprovals(deps ApprovalsDeps) (*Approvals, error) {
 		flags:     deps.Flags,
 		audit:     deps.Audit,
 		ttl:       deps.TTL,
+		notices:   deps.Notices,
 		clock:     deps.Clock,
 		log:       deps.Logger,
 	}
@@ -233,6 +238,13 @@ func (a *Approvals) Request(ctx context.Context, req SpendRequest) (repository.A
 		Str("currency", currency).
 		Str("outcome", string(decision.Outcome)).
 		Msg("approval decided")
+
+	// Only pending. An auto-approved request needed nobody, and a denied one is
+	// already over — messaging either would teach the recipient that most of these
+	// need no attention, which is exactly how the one that does gets missed.
+	if decision.Outcome == domain.ApprovalPending {
+		a.notices.ApprovalPending(ctx, record.ID, actionType)
+	}
 
 	return record, nil
 }

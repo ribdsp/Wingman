@@ -8,9 +8,6 @@
 secrets/
 keys/
 
-# ---- Rakazo fork (own git repo, provisioned by scripts/fork-core.sh) ----
-core/
-
 # ---- Private product documents -------------------------------------------
 # The original PRD names products, people and infrastructure that are nobody
 # else's business. Its public, redacted equivalent is docs/motivation.md, and
@@ -48,6 +45,10 @@ deploy/volumes/
 *.pid
 *.log
 
+# Sandbox workspaces: whatever an agent wrote while working. Per user, never
+# shared, and never somebody else's business.
+core/workspaces/
+
 # ---- OS / editor ---------------------------------------------------------
 .DS_Store
 Thumbs.db
@@ -62,3 +63,9 @@ desktop.ini
 .claude/settings.local.json
 tmp/
 scratch/
+# Written wherever a browser-automation tool is pointed, one directory per run.
+.playwright-mcp/
+# Screenshots taken while measuring the console land in the working directory
+# when the tool is handed a bare filename. Root only, so docs/ and web/public/
+# may still carry a real image.
+/*.png

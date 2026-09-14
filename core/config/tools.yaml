@@ -1,0 +1,91 @@
+# What an agent may do — Wingman core.
+#
+# This file is owned by the operator and read once at startup. There is no API that
+# writes it: a list of what an autonomous agent is allowed to do is not a list an
+# autonomous agent may edit. That is the same rule the goal engine applies to metric
+# definitions and spending policies.
+#
+# Read the default carefully. A tool that is NOT named here is denied — not passed
+# through, not treated as harmless. Tools arrive from MCP servers at runtime, so a
+# server that gains a capability overnight must not gain it here silently. That is why
+# this file ships empty: a fresh instance can think, read its own workspace and answer,
+# and it cannot act until you say what it may do.
+#
+# Each entry answers one question: what is this tool able to do?
+#
+#   name          the tool's name, exactly as the model sees it. See "Names" below
+#   class         read | write | spend. Required — there is no default
+#   description   for whoever reads this file. Nothing sends it to a model; the tool's
+#                 own description comes from the source that implements it
+#   enabled       false denies every call. Omitted means true, because a tool an
+#                 operator wrote down is meant to be usable
+#   spend         required for class spend, refused on any other
+#
+# What each class means at call time:
+#
+#   read    allowed
+#   write   allowed while somebody is watching the run — a person in a chat can undo a
+#           wrong message in seconds. Refused for that run when nobody is, and the model
+#           is told why, so an unattended run can still finish and report what it read
+#   spend   never decided here. The call is filed with the goal engine's spending gate,
+#           which has the caps, the daily totals and the audit row. A second gate in core
+#           would be a weaker copy, and the weaker of two gates is the one that decides
+#
+# A tool declared as spend with no spend block is denied rather than filed: an approval
+# request with no amount would be refused there for a reason that names the missing
+# number instead of the missing configuration.
+#
+# ---- Names ---------------------------------------------------------------
+# The name has to match what the run offers, character for character:
+#
+#   shell                        the sandbox shell, always registered
+#   mcp__<server>__<tool>        a tool from an MCP server in config/mcp.yaml, where
+#                                <server> is that server's name
+#   <tool>                       an endpoint you declared in config/http-tools.yaml,
+#                                under the name you gave it there
+#
+# Start the service with LOG_LEVEL=debug to see the qualified names a server offers.
+# Letters, digits, _ and - only: both providers reject anything else.
+#
+# ---- A note on the shell -------------------------------------------------
+# What class the shell deserves depends on your sandbox, not on the tool. With
+# SANDBOX_BACKEND=docker and SANDBOX_NETWORK=none it changes nothing outside a
+# throwaway container and a workspace directory, and read is honest. Give the sandbox
+# network access, or run SANDBOX_BACKEND=local, and a generated script can reach
+# whatever the host can — then it is a write at least, and on a local backend it is
+# every write the service's own user can perform.
+
+tools: []
+
+# ---------------------------------------------------------------------------
+# A worked example. Copy it, keep the classes honest, and remove the empty list above.
+# ---------------------------------------------------------------------------
+# tools:
+#   - name: shell
+#     description: Run a command in this run's sandbox workspace
+#     class: read                 # docker backend, SANDBOX_NETWORK=none. See above
+#
+#   - name: mcp__github__list_issues
+#     description: Read issues on the repositories that token can see
+#     class: read
+#
+#   - name: mcp__github__create_issue
+#     description: Open an issue. Somebody else gets a notification, so: write
+#     class: write
+#
+#   - name: mcp__ads__topup_campaign
+#     description: Top up a campaign's budget
+#     class: spend
+#     spend:
+#       # Must match an actionType in the goal engine's config/policies.yaml. A name
+#       # with no policy there asks a human every time, which is that file's default.
+#       actionType: ads.spend
+#       # Which of this tool's own arguments carries the amount. The model fills it in;
+#       # the gate's caps are what decide.
+#       amountArgument: amount
+#       currency: IDR
+#
+#   - name: send_invoice_email
+#     description: Email an invoice to a customer
+#     class: write
+#     enabled: false              # written down, and denied until you flip this

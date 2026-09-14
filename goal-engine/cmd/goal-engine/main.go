@@ -153,10 +153,24 @@ func run() error {
 	coreClient, err := core.New(cfg.Core.BaseURL, cfg.Core.APIKey,
 		core.WithTimeout(cfg.Core.Timeout),
 		core.WithTaskPath(cfg.Core.TaskPath),
+		core.WithNotifyPath(cfg.Core.NotifyPath),
 		core.WithDryRun(cfg.Core.DryRun),
 	)
 	if err != nil {
 		return err
+	}
+
+	// Notifications are off unless an operator asked for them, and off is a nil
+	// *Notices rather than a flag the services have to consult. That is the whole
+	// reason the type tolerates a nil receiver: neither the monitor nor the approval
+	// gate carries a question about messaging into a decision.
+	var notices *service.Notices
+	if cfg.Notify.Enabled {
+		notices = service.NewNotices(service.NoticesDeps{
+			Notifier:       coreClient,
+			ConsoleBaseURL: cfg.Notify.ConsoleBaseURL,
+			Logger:         log,
+		})
 	}
 
 	goalRepo := repository.NewGoalRepository(db)
@@ -184,6 +198,7 @@ func run() error {
 		Flags:     flagRepo,
 		Audit:     auditRepo,
 		TTL:       cfg.ApprovalTTL,
+		Notices:   notices,
 		Logger:    log,
 	})
 	if err != nil {
@@ -198,6 +213,16 @@ func run() error {
 		return err
 	}
 	auditLog, err := service.NewAuditLog(service.AuditLogDeps{Reader: auditRepo})
+	if err != nil {
+		return err
+	}
+	// Read-only over the same rows the monitor writes. It is given the evaluation
+	// repository as a reader and the goal repository as a lookup, so nothing serving
+	// these routes can insert a verdict or move a target.
+	evaluations, err := service.NewEvaluations(service.EvaluationsDeps{
+		Reader: evaluationRepo,
+		Goals:  goalRepo,
+	})
 	if err != nil {
 		return err
 	}
@@ -222,6 +247,7 @@ func run() error {
 		Metrics:          metricRegistry,
 		Sampler:          sampler,
 		Tasks:            coreClient,
+		Notices:          notices,
 		DefaultBotID:     cfg.Core.DefaultBotID,
 		DefaultChannelID: cfg.Core.DefaultChannelID,
 		Location:         cfg.Location,
@@ -234,14 +260,15 @@ func run() error {
 	}
 
 	h, err := handler.New(handler.Deps{
-		Goals:     goals,
-		Approvals: approvals,
-		Flags:     flags,
-		Audit:     auditLog,
-		Monitor:   monitor,
-		Samples:   samples,
-		Metrics:   metricRegistry,
-		Logger:    log,
+		Goals:       goals,
+		Approvals:   approvals,
+		Flags:       flags,
+		Audit:       auditLog,
+		Evaluations: evaluations,
+		Monitor:     monitor,
+		Samples:     samples,
+		Metrics:     metricRegistry,
+		Logger:      log,
 	})
 	if err != nil {
 		return err
@@ -515,10 +542,17 @@ func logStartup(log zerolog.Logger, cfg config.Config, metricRegistry *metrics.R
 		Bool("monitorEnabled", cfg.Monitor.Enabled).
 		Dur("monitorInterval", cfg.Monitor.Interval).
 		Bool("triggerDryRun", cfg.Core.DryRun).
+		Bool("notifyEnabled", cfg.Notify.Enabled).
 		Msg("goal engine listening")
 
 	if cfg.Core.DryRun {
 		log.Warn().Msg("TRIGGER_DRY_RUN is on: goals are evaluated and recorded, but no task reaches Wingman core")
+	}
+	// Notifications are best-effort by design, so the one thing worth saying at
+	// startup is when they are on but cannot carry a link — a message with nothing to
+	// open is a message somebody has to go and find the console for.
+	if cfg.Notify.Enabled && cfg.Notify.ConsoleBaseURL == "" {
+		log.Warn().Msg("NOTIFY_ENABLED is on with no WEB_BASE_URL: notifications will go out without a link to the console")
 	}
 	if len(cfg.TrustedProxies) == 0 {
 		log.Info().Msg("no trusted proxies configured: the rate limiter keys on the peer address, which is correct only when nothing sits in front of this service")

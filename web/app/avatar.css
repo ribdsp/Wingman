@@ -1,0 +1,200 @@
+/*
+ * The bot's face, in CSS.
+ *
+ * Ported from Rakazo's `packages/ui-web/src/styles.css` (Apache-2.0 — see NOTICE): the eye
+ * animation is driven by custom properties set on the element rather than by a class per
+ * variant, so one rule animates every avatar and the component only has to choose a name and
+ * a duration. Four idle patterns exist for one reason — several avatars on screen blinking in
+ * lockstep look like a bank of LEDs, and blinking out of step looks like attention.
+ *
+ * Only the robot variant is ported. Rakazo also ships an organic blob whose shape is
+ * generated per identity; this console shows one agent, not a roster, so a second face would
+ * be a choice nobody makes.
+ *
+ * Two states, and they are the only thing the face says: idle, and working. Working is a run
+ * in flight — the eyes track, the ring spins, and it stops the moment the run stops.
+ */
+
+@keyframes wgm-avatar-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.wgm-avatar {
+  transition: box-shadow 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wgm-avatar-ring {
+  animation: wgm-avatar-spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  opacity: 0;
+  transition: opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wgm-avatar[data-working='true'] .wgm-avatar-ring {
+  opacity: 1;
+}
+
+.wgm-avatar-eyes {
+  animation: var(--wgm-eye-name) var(--wgm-eye-duration) var(--wgm-eye-easing)
+    var(--wgm-eye-delay) infinite;
+  transition: opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Both eye layers are always rendered and cross-faded, so a run starting does not remount
+   the face — it changes expression. */
+.wgm-avatar-eyes-working {
+  opacity: 0;
+}
+
+.wgm-avatar[data-working='true'] .wgm-avatar-eyes-idle {
+  opacity: 0;
+}
+
+.wgm-avatar[data-working='true'] .wgm-avatar-eyes-working {
+  opacity: 1;
+}
+
+@keyframes wgm-eyes-idle-0 {
+  0%,
+  32%,
+  100% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  35% {
+    transform: translate(0, 0) scaleY(0.08);
+  }
+  38% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  48%,
+  62% {
+    transform: translate(3px, -0.5px) scaleY(1);
+  }
+  70%,
+  84% {
+    transform: translate(-2.5px, 0.5px) scaleY(1);
+  }
+  89% {
+    transform: translate(0, 0) scaleY(0.12);
+  }
+  91% {
+    transform: translate(0, 0) scaleY(1);
+  }
+}
+
+@keyframes wgm-eyes-idle-1 {
+  0%,
+  25%,
+  100% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  32%,
+  48% {
+    transform: translate(-3px, -1px) scaleY(1);
+  }
+  54% {
+    transform: translate(0, 0) scaleY(0.08);
+  }
+  56% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  59% {
+    transform: translate(0, 0) scaleY(0.08);
+  }
+  61% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  68%,
+  82% {
+    transform: translate(2.5px, 0.5px) scaleY(1);
+  }
+}
+
+@keyframes wgm-eyes-idle-2 {
+  0%,
+  28%,
+  100% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  36%,
+  52% {
+    transform: translate(0.5px, -1.8px) scaleY(1.05);
+  }
+  58% {
+    transform: translate(0, 0) scaleY(0.08);
+  }
+  60% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  68%,
+  85% {
+    transform: translate(3px, 0) scaleY(1);
+  }
+  92% {
+    transform: translate(0, 0) scaleY(0.1);
+  }
+  94% {
+    transform: translate(0, 0) scaleY(1);
+  }
+}
+
+@keyframes wgm-eyes-idle-3 {
+  0%,
+  24%,
+  100% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  30%,
+  46% {
+    transform: translate(-2.5px, 1.2px) scaleY(0.95);
+  }
+  52% {
+    transform: translate(0, 0) scaleY(0.08);
+  }
+  54% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  62%,
+  78% {
+    transform: translate(2.8px, -1px) scaleY(1);
+  }
+  86% {
+    transform: translate(0, 0) scaleY(0.08);
+  }
+  88% {
+    transform: translate(0, 0) scaleY(1);
+  }
+}
+
+@keyframes wgm-eyes-working {
+  0% {
+    transform: translate(-4px, 0) scale(0.92, 0.95);
+  }
+  25% {
+    transform: translate(0, -2px) scale(1.08, 1.08);
+  }
+  50% {
+    transform: translate(4px, 0) scale(0.92, 0.95);
+  }
+  75% {
+    transform: translate(0, 2px) scale(1, 0.9);
+  }
+  100% {
+    transform: translate(-4px, 0) scale(0.92, 0.95);
+  }
+}
+
+/* A face that blinks is charm; a face that blinks at somebody who asked the browser to stop
+   moving things is a bug. The eyes stay open and the ring stays put. */
+@media (prefers-reduced-motion: reduce) {
+  .wgm-avatar,
+  .wgm-avatar-ring,
+  .wgm-avatar-eyes {
+    animation: none;
+    transition: none;
+  }
+}

@@ -1,11 +1,16 @@
-# Continuous integration for the Wingman goal engine.
+# Continuous integration for Wingman.
 #
-# The race detector runs here and only here: it needs cgo and a C toolchain, which
-# not every contributor has, so `make test` stays cgo-free and this job is what
-# guarantees nothing merges unraced.
+# Two Go modules, goal-engine/ and core/, tested as a matrix. Both are in this
+# repository and both must be green: the goal engine decides when an agent should be
+# woken, core is what wakes up, and a change to either can break the pair.
 #
-# Everything runs against goal-engine/. core/ is a separate repository (a fork of
-# Rakazo) and is not part of this history, so there is nothing here to build for it.
+# A third job covers web/, the operator console. It is a Node project rather than a Go
+# module, so it does not fit the matrix: what it has instead of a test suite over
+# decisions is a type checker over an API surface it does not own. Both run.
+#
+# The race detector runs here and only here: it needs cgo and a C toolchain, which not
+# every contributor has, so `make test` stays cgo-free and this job is what guarantees
+# nothing merges unraced.
 
 name: CI
 
@@ -18,27 +23,32 @@ on:
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: goal-engine
-
 env:
-  # The suite needs no database, no network and no fixtures. If that ever stops
-  # being true, it is a bug in the test, not a missing service here.
+  # Neither suite needs a database, a network or a fixture. If that ever stops being
+  # true, it is a bug in the test, not a missing service here.
   CGO_ENABLED: 0
 
 jobs:
   test:
-    name: Test
+    name: Test (${{ matrix.module }})
     runs-on: ubuntu-latest
+    strategy:
+      # Both legs run to completion. Which module broke is the first thing you want to
+      # know, and cancelling the other leg hides half the answer.
+      fail-fast: false
+      matrix:
+        module: [goal-engine, core]
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
-          # Single source of truth: bump go.mod, not this file.
-          go-version-file: goal-engine/go.mod
-          cache-dependency-path: goal-engine/go.sum
+          # Single source of truth: bump the module's go.mod, not this file.
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: ${{ matrix.module }}/go.sum
 
       - name: Formatting
         run: |
@@ -69,9 +79,11 @@ jobs:
           go tool cover -func=coverage.out | tail -1
           total="$(go tool cover -func=coverage.out | awk 'END {gsub(/%/, "", $3); print $3}')"
           echo "total coverage: ${total}%"
-          # The project bar is 80%. The suite has been well above it since the
-          # decision core was written; a drop below is a change worth arguing for
-          # in the pull request rather than something to notice three months later.
+          # The project bar is 80%, whole-module, and both modules clear it. Core sits
+          # lower than the goal engine because cmd/core is wiring and wiring is proved
+          # by the build; the packages that make decisions are well above. A drop below
+          # the bar is a change worth arguing for in the pull request rather than
+          # something to notice three months later.
           awk -v t="$total" 'BEGIN { exit (t + 0 >= 80) ? 0 : 1 }' || {
             echo "coverage ${total}% is below the 80% bar"
             exit 1
@@ -83,13 +95,59 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage
-          path: goal-engine/coverage.out
+          # Per module, because two legs uploading "coverage" is an error.
+          name: coverage-${{ matrix.module }}
+          path: ${{ matrix.module }}/coverage.out
           retention-days: 7
 
-  lint:
-    name: Lint (advisory)
+  web:
+    name: Console (web)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the runtime in web/Dockerfile. Bump both together.
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # `npm ci` and not `npm install`: it installs the lockfile as written and fails if
+      # package.json and the lockfile disagree, which is the property that makes this run
+      # tell you anything about the tree that was tested.
+      - name: Install
+        run: npm ci
+
+      # The console's whole job is rendering what two Go services return. It owns no
+      # schema, so what a suite can prove here is narrower than in a Go module: the type
+      # checker is the first real gate, and it runs over the pages too.
+      - name: Types
+        run: npm run typecheck
+
+      # Every test is a pure function under lib/ — the proxy allowlist, the envelope
+      # parser, the formatters, the tone table. There is no browser, no jsdom and no
+      # rendering test, because a component that only arranges what a server component
+      # already fetched has nothing to assert that the type checker does not.
+      - name: Test
+        run: npm run test
+
+      # Also the second type check, over the production build, plus proof that no route
+      # was accidentally made static: a page that cached its render would show an
+      # operator an approval queue from some earlier minute.
+      - name: Build
+        run: npm run build
+
+  lint:
+    name: Lint (${{ matrix.module }}, advisory)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [goal-engine, core]
     # Advisory on purpose, for now. golangci-lint's standard set flags patterns this
     # codebase uses deliberately (unchecked `defer tx.Rollback()`, for one), and a
     # red pipeline that everybody learns to ignore is worse than an amber one they
@@ -101,82 +159,161 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version-file: goal-engine/go.mod
-          cache-dependency-path: goal-engine/go.sum
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: ${{ matrix.module }}/go.sum
 
       - uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          working-directory: goal-engine
-
-  shell:
-    name: Shell scripts
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Syntax
-        run: bash -n scripts/*.sh
-
-      - name: shellcheck
-        run: shellcheck scripts/*.sh
+          working-directory: ${{ matrix.module }}
 
   container:
-    name: Container and compose
+    name: Containers and compose
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build the image
+      - name: Build all three images
         run: |
           docker build \
             --build-arg VERSION="ci-${GITHUB_SHA::12}" \
             -t wingman/goal-engine:ci \
             goal-engine
 
-      - name: The image runs as a non-root user
-        run: |
-          user="$(docker image inspect wingman/goal-engine:ci --format '{{.Config.User}}')"
-          echo "image user: ${user:-<empty>}"
-          case "$user" in
-            nonroot*|65532*) ;;
-            *) echo "the image must not run as root"; exit 1 ;;
-          esac
+          docker build \
+            --build-arg VERSION="ci-${GITHUB_SHA::12}" \
+            -t wingman/core:ci \
+            core
 
-      - name: The image contents are what they should be
+          # No VERSION argument: the console has no build stamp to carry. It reports
+          # nothing about itself and every version an operator cares about is reported by
+          # the service that holds the data.
+          docker build \
+            -t wingman/web:ci \
+            web
+
+      - name: No image runs as root
         run: |
-          # The image is distroless: no shell, so its filesystem is inspected from
-          # outside. docker export flattens the container, which is what a running
-          # process actually sees.
-          cid="$(docker create wingman/goal-engine:ci)"
-          docker export "$cid" | tar -t > /tmp/fs.txt
+          for image in wingman/goal-engine:ci wingman/core:ci wingman/web:ci; do
+            user="$(docker image inspect "$image" --format '{{.Config.User}}')"
+            echo "${image} user: ${user:-<empty>}"
+            case "$user" in
+              nonroot*|core*|node*|65532*) ;;
+              *) echo "${image} must not run as root"; exit 1 ;;
+            esac
+          done
+
+          # Core's image is alpine and has a shell, so its uid can be asserted rather
+          # than inferred from a name. It is fixed at 65532 because the docker sandbox
+          # backend passes this uid to `docker run --user`, so a file an agent writes in
+          # a workspace has a predictable owner on the host.
+          uid="$(docker run --rm --entrypoint sh wingman/core:ci -c 'id -u')"
+          echo "core uid: ${uid}"
+          test "$uid" = "65532" || { echo "core's uid must be 65532, got ${uid}"; exit 1; }
+
+      - name: The images contain what they should and no secret
+        run: |
+          # The goal engine's image is distroless: no shell, so its filesystem is
+          # inspected from outside. docker export flattens the container, which is what
+          # a running process actually sees. The same method is used for core so that
+          # both assertions read the same way.
+          check_image() {
+            image="$1"; binary="$2"
+            cid="$(docker create "$image")"
+            docker export "$cid" | tar -t > /tmp/fs.txt
+            docker rm "$cid" >/dev/null
+
+            # .dockerignore excludes .env; this proves the exclusion holds. It scans the
+            # flattened filesystem, so it would not catch a secret added and then
+            # deleted in a later layer — neither Dockerfile copies a secret at any
+            # stage, which is the property that makes that unreachable.
+            if grep -qE '(^|/)\.env(\..*)?$' /tmp/fs.txt; then
+              echo "${image}: an environment file is present in the image:"
+              grep -E '(^|/)\.env(\..*)?$' /tmp/fs.txt
+              exit 1
+            fi
+
+            # The binary needs all three at the paths it defaults to.
+            grep -q "^app/${binary}\$" /tmp/fs.txt || { echo "${image}: binary missing"; exit 1; }
+            grep -q '^app/migrations/'  /tmp/fs.txt || { echo "${image}: migrations missing"; exit 1; }
+            grep -q '^app/config/'      /tmp/fs.txt || { echo "${image}: config missing"; exit 1; }
+          }
+
+          check_image wingman/goal-engine:ci goal-engine
+          check_image wingman/core:ci core
+
+      - name: The console's image is a traced server and nothing else
+        run: |
+          # Not run through check_image: the console has no binary, no migrations and no
+          # config directory. It has a traced server and the static assets that server
+          # hands out, and the assertions worth making are different.
+          cid="$(docker create wingman/web:ci)"
+          docker export "$cid" | tar -t > /tmp/web-fs.txt
           docker rm "$cid" >/dev/null
 
-          # .dockerignore excludes .env; this proves the exclusion holds. It scans
-          # the flattened filesystem, so it would not catch a secret added and then
-          # deleted in a later layer — the Dockerfile copies no secret at any stage,
-          # which is the property that makes that unreachable.
-          if grep -qE '(^|/)\.env(\..*)?$' /tmp/fs.txt; then
-            echo "an environment file is present in the image:"
-            grep -E '(^|/)\.env(\..*)?$' /tmp/fs.txt
+          # .dockerignore excludes .env and .env.local, and .env.example is never copied.
+          # Every setting this console has arrives at run time.
+          if grep -qE '(^|/)\.env(\..*)?$' /tmp/web-fs.txt; then
+            echo "an environment file is present in the console's image:"
+            grep -E '(^|/)\.env(\..*)?$' /tmp/web-fs.txt
             exit 1
           fi
 
-          # The binary needs both of these at the paths it defaults to.
-          grep -q '^app/goal-engine$' /tmp/fs.txt || { echo "binary missing"; exit 1; }
-          grep -q '^app/migrations/' /tmp/fs.txt  || { echo "migrations missing"; exit 1; }
-          grep -q '^app/config/'     /tmp/fs.txt  || { echo "config missing"; exit 1; }
+          # What `node server.js` needs: the traced entrypoint and the static assets that
+          # standalone deliberately leaves behind for the Dockerfile to copy separately.
+          grep -q '^app/server.js$'   /tmp/web-fs.txt || { echo "server.js missing"; exit 1; }
+          grep -q '^app/.next/static/' /tmp/web-fs.txt || { echo "static assets missing"; exit 1; }
+
+          # The proof that the standalone trace actually happened rather than the whole
+          # dependency tree being copied in: a test runner in a runtime image means
+          # next/vitest/typescript came along, and with them a much larger attack surface
+          # than a console that renders two APIs has any reason to carry.
+          if grep -qE '^app/node_modules/(vitest|typescript|@types)/' /tmp/web-fs.txt; then
+            echo "development dependencies are present in the runtime image"
+            exit 1
+          fi
+
+      - name: Core's image carries the docker client and no daemon
+        run: |
+          # SANDBOX_BACKEND=docker shells out to this binary at startup, which is why
+          # the image is alpine rather than distroless. A missing client is a service
+          # that boots and then fails the first tool call.
+          docker run --rm --entrypoint docker wingman/core:ci --version
+
+          # The client only. A daemon inside this image would be docker-in-docker,
+          # which needs a privileged container — a worse boundary than the socket the
+          # compose file mounts, for a sandbox whose job is to run untrusted output.
+          cid="$(docker create wingman/core:ci)"
+          docker export "$cid" | tar -t > /tmp/core-fs.txt
+          docker rm "$cid" >/dev/null
+          if grep -qE '(^|/)dockerd$' /tmp/core-fs.txt; then
+            echo "a docker daemon is present in core's image"
+            exit 1
+          fi
+
+      - name: The shipped tool configuration grants nothing
+        run: |
+          # A release that shipped a permissive config would arm every fresh instance
+          # on first boot. The unit suite asserts this too; it is repeated against the
+          # built image because the image is what an operator actually runs.
+          cid="$(docker create wingman/core:ci)"
+          docker cp "$cid":/app/config /tmp/core-config >/dev/null
+          docker rm "$cid" >/dev/null
+          ls -la /tmp/core-config
+          if grep -rnE '^[[:space:]]*-[[:space:]]' /tmp/core-config; then
+            echo "the shipped config declares a list entry; it must declare nothing"
+            exit 1
+          fi
 
       - name: The compose stack is valid
         run: |
-          # POSTGRES_PASSWORD has no default in the compose file, so this also
-          # proves .env.example carries every variable the stack needs.
-          cp goal-engine/.env.example deploy/.env
-          docker compose -f deploy/docker-compose.yml config -q
-          rm deploy/.env
+          # Neither password has a default in the compose file, and every env_file it
+          # names must exist, so this also proves the four .env.example files together
+          # carry everything the stack needs.
+          cd deploy
+          cp .env.example                 .env
+          cp ../goal-engine/.env.example  .env.goal-engine
+          cp ../core/.env.example         .env.core
+          cp ../web/.env.example          .env.web
+          docker compose -f docker-compose.yml config -q
+          rm .env .env.goal-engine .env.core .env.web

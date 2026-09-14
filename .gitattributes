@@ -1,7 +1,7 @@
 # Line endings.
 #
-# Everything here runs on Linux: the container, the compose stack, CI, and the VPS
-# this is meant to be deployed on. A CRLF in scripts/fork-core.sh becomes
+# Everything here runs on Linux: the containers, the compose stack, CI, and the VPS
+# this is meant to be deployed on. A CRLF in a shell script becomes
 # "bad interpreter: /usr/bin/env bash^M", and a CRLF in the Makefile breaks make —
 # both of which are confusing failures that appear only for contributors on Windows.
 #

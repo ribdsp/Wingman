@@ -65,6 +65,7 @@ type monitorFixture struct {
 	metrics     *fakeMetrics
 	sampler     *fakeSampler
 	tasks       *fakeTasks
+	notifier    *fakeNotifier
 }
 
 // newMonitorFixture builds a monitor observing `observed` for every due goal.
@@ -80,6 +81,7 @@ func newMonitorFixture(t *testing.T, observed float64, due ...repository.GoalRec
 		metrics:     newFakeMetrics(testMetric),
 		sampler:     &fakeSampler{value: observed, at: testNow},
 		tasks:       &fakeTasks{response: core.TaskResponse{TaskID: "task-9", StatusCode: 201}},
+		notifier:    &fakeNotifier{},
 	}
 
 	monitor, err := NewMonitor(MonitorDeps{
@@ -93,6 +95,7 @@ func newMonitorFixture(t *testing.T, observed float64, due ...repository.GoalRec
 		Metrics:      f.metrics,
 		Sampler:      f.sampler,
 		Tasks:        f.tasks,
+		Notices:      NewNotices(NoticesDeps{Notifier: f.notifier, ConsoleBaseURL: "https://console.wingman.test"}),
 		Clock:        fixedClock(testNow),
 	})
 	if err != nil {
@@ -714,6 +717,86 @@ func TestTickSkipsAGoalThatIsNoLongerActive(t *testing.T) {
 	}
 	if result.Triggered != 0 {
 		t.Fatalf("expected no dispatch for a paused goal, got %+v", result)
+	}
+}
+
+// --- notifications ---
+//
+// The last thing a dispatch does, and the only part of it nobody depends on.
+
+func TestTickNotifiesAHumanThatAnAgentIsNowWorkingUnattended(t *testing.T) {
+	f := newMonitorFixture(t, 10, testGoal())
+
+	if _, err := f.monitor.Tick(context.Background()); err != nil {
+		t.Fatalf("expected the tick to succeed, got %v", err)
+	}
+	if len(f.notifier.sent) != 1 {
+		t.Fatalf("expected one notification, got %+v", f.notifier.sent)
+	}
+	sent := f.notifier.sent[0]
+	if sent.Kind != core.NotifyTrigger {
+		t.Fatalf("expected a trigger notification, got %q", sent.Kind)
+	}
+	if sent.SubjectID != "goal-1" {
+		t.Fatalf("expected the notification to name the goal, got %q", sent.SubjectID)
+	}
+	if sent.Link != "https://console.wingman.test/goals/goal-1" {
+		t.Fatalf("expected a link to the goal, got %q", sent.Link)
+	}
+	// Not the gap, not the observed value, not the target. Those are on the screen
+	// the link opens, where the evaluation history is next to them.
+	for _, r := range sent.Headline {
+		if r >= '0' && r <= '9' {
+			t.Fatalf("expected no figure in a headline, got %q", sent.Headline)
+		}
+	}
+}
+
+func TestTickNotifiesNobodyAboutAQuietCheck(t *testing.T) {
+	// A goal on pace is the normal case and happens every tick. Messaging it would
+	// make the notification channel worthless within a day.
+	f := newMonitorFixture(t, 35, testGoal())
+
+	if _, err := f.monitor.Tick(context.Background()); err != nil {
+		t.Fatalf("expected the tick to succeed, got %v", err)
+	}
+	if len(f.notifier.sent) != 0 {
+		t.Fatalf("expected no notification, got %+v", f.notifier.sent)
+	}
+}
+
+func TestTickNotifiesNobodyWhenTheDispatchItselfFailed(t *testing.T) {
+	// No agent was woken, so there is nothing to tell anybody they are now watching.
+	// The failure is in the dispatch row and the tick result instead.
+	f := newMonitorFixture(t, 10, testGoal())
+	f.tasks.err = errBoom
+
+	if _, err := f.monitor.Tick(context.Background()); err != nil {
+		t.Fatalf("expected the tick itself to survive, got %v", err)
+	}
+	if len(f.notifier.sent) != 0 {
+		t.Fatalf("expected no notification, got %+v", f.notifier.sent)
+	}
+}
+
+func TestTickDispatchesIdenticallyWhenTheNotifierFails(t *testing.T) {
+	// A chat platform being down must not turn a dispatched trigger into a failed
+	// goal: the agent is already running and the console already shows it.
+	f := newMonitorFixture(t, 10, testGoal())
+	f.notifier.err = errBoom
+
+	result, err := f.monitor.Tick(context.Background())
+	if err != nil {
+		t.Fatalf("expected the tick to succeed, got %v", err)
+	}
+	if result.Triggered != 1 || result.Failed != 0 {
+		t.Fatalf("expected the dispatch to stand, got %+v", result)
+	}
+	if len(f.dispatches.sent) != 1 {
+		t.Fatalf("expected the dispatch still marked sent, got %v", f.dispatches.sent)
+	}
+	if !f.audit.has(ActionTriggerDispatch) || f.audit.has(ActionTriggerFailed) {
+		t.Fatalf("expected the audit trail unchanged, got %v", f.audit.actions())
 	}
 }
 

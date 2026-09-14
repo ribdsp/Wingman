@@ -28,6 +28,8 @@ func TestAnUnauthenticatedRequestReachesNothing(t *testing.T) {
 	}{
 		{http.MethodGet, "/v1/goals", ""},
 		{http.MethodPost, "/v1/goals", validGoalBody()},
+		{http.MethodGet, "/v1/goals/goal-1/evaluations", ""},
+		{http.MethodGet, "/v1/evaluations/latest", ""},
 		{http.MethodGet, "/v1/flags/kill-switch", ""},
 		{http.MethodPut, "/v1/flags/kill-switch", `{"engaged":true,"reason":"x"}`},
 		{http.MethodGet, "/v1/audit", ""},

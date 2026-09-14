@@ -1,0 +1,235 @@
+@import 'tailwindcss';
+@import './avatar.css';
+
+/*
+ * The console's surface, ported from Rakazo.
+ *
+ * Rakazo (github.com/elie222/rakazo, Apache-2.0) is the project Wingman was scoped against,
+ * and its palette is adopted here slot for slot rather than re-invented: names follow the
+ * shadcn convention, so a `border` is always a border and never a fill, and a surface is
+ * separated from the surface behind it by its own fill plus one hairline — not by a grid of
+ * rules. Every hex below is Rakazo's dark theme verbatim, with three documented exceptions
+ * noted where they appear.
+ *
+ * Colour still means one thing at a time. Three instrument colours and nothing else:
+ *
+ *   warning      attention: an approval is waiting, a decision is pending, work in flight
+ *   success      on track: pace at or above 1, a run that completed, a grant that holds
+ *   destructive  stopped: denied, halted, behind pace, cancelled, unreadable
+ *
+ * A dashboard where six things are green and four are blue is a dashboard nobody reads,
+ * because colour that means "this is a heading" cannot also mean "look at this now".
+ */
+
+@theme {
+  /* Surfaces, back to front. `background` is the room; `card` is a panel resting on it;
+     `sidebar` is the one permanent edge; `accent` is a row under the cursor. */
+  --color-background: #0d0d0e;
+  --color-card: #141416;
+  --color-sidebar: #17171a;
+  --color-sidebar-accent: #232329;
+  --color-accent: #202023;
+  /* The agent's chat bubble, and the one hex lifted off Rakazo's value (#1a1a1d) — the third
+     exception. In Rakazo a transcript sits on `background`; here it sits inside a panel, one
+     surface further forward, and their fill left the agent's bubble all but invisible on it.
+     Lifted just far enough to read as a bubble on `card` while staying a step below the fill a
+     person's own message gets. */
+  --color-muted: #1f1f23;
+
+  /* The near-white the send button and the wordmark's bars are made of. The console's one
+     filled surface, and it is spent on the two things that are not readings. */
+  --color-primary: #f1f1ef;
+  --color-primary-foreground: #1a1a1a;
+  /* The chat pair: a person's own message sits on this, the agent's on `muted`. Two fills
+     rather than one fill and one outline, because in a transcript "who said it" has to be
+     answerable from the shape alone, before any word is read. */
+  --color-chat-user: #2b2b31;
+
+  --color-border: #26262a;
+  --color-input: #2a2a2e;
+  --color-ring: #a6a6ad;
+
+  /*
+   * Three levels of text, where Rakazo has two.
+   *
+   * This console has dense tables and a small uppercase caption over every reading, which
+   * Rakazo has no equivalent of, so it needs one more step than a chat app does. Rakazo's
+   * `muted-foreground` (#85858a) is kept as the dimmest level, `faint`, where it is used for
+   * captions at 11px and still clears 4.5:1 on card; the middle level is lifted to #a9a9b2
+   * so 13px table text is comfortably readable rather than merely legible.
+   */
+  --color-foreground: #ececee;
+  --color-muted-foreground: #a9a9b2;
+  --color-faint: #85858a;
+
+  --color-success: #4ecb71;
+  --color-warning: #e9c46a;
+  --color-destructive: #ef4444;
+  --color-link: #86b7ff;
+
+  /* The dim halves carry a tone at fill strength — a button's border, a hover wash. Derived
+     from the three above rather than taken from Rakazo, which has no dim slots. */
+  --color-success-dim: #24603a;
+  --color-warning-dim: #6e5a26;
+  --color-destructive-dim: #7a2222;
+
+  --font-ui: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /*
+   * Rakazo's radius scale: a 12px base with the derived steps around it. This is most of why
+   * their UI reads as friendly and ours did not — a 0px corner on every surface is what an
+   * instrument panel and a spreadsheet have in common.
+   */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.5rem;
+
+  --text-instrument: 2.25rem;
+  --text-body: 0.9375rem;
+  --text-table: 0.8125rem;
+  --text-label: 0.6875rem;
+
+  /* One row height for every table in the console. A dense panel reads as one instrument
+     only if its rows line up across panels. */
+  --spacing-row: 1.75rem;
+  /* Rows you point at rather than read: sidebar entries, the account card. Fingers and
+     cursors need more than a table row does. */
+  --spacing-nav: 2.375rem;
+  --spacing-rail: 15rem;
+}
+
+/*
+ * Halted state. When the kill switch is engaged the whole console changes state rather than
+ * showing a badge somewhere: warning goes dead, because nothing is waiting on a human while
+ * everything is stopped, and the top rule turns red.
+ *
+ * Set on the console shell by the server on every render, so a page loaded while halted is
+ * never briefly rendered as if it were not. A plain attribute selector rather than one
+ * anchored at :root, because the shell is where the switch is read and the variables cascade
+ * from wherever they are redefined.
+ */
+[data-halted='true'] {
+  --color-warning: #6b6a60;
+  --color-warning-dim: #3c3b35;
+}
+
+html {
+  background: var(--color-background);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numerals in this console are compared column against column, so they are always tabular
+   and always monospaced — a figure that shifts width as it ticks is a figure that cannot be
+   read at a glance. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* The small uppercase caption over every reading. Letterspaced because at 11px an uppercase
+   run without it is a smear. */
+.label {
+  font-size: var(--text-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-faint);
+  font-weight: 500;
+}
+
+/* Focus is visible and it is warning-independent: it must still be visible when the kill
+   switch has drained warning out of the palette. */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--color-chat-user);
+  color: var(--color-foreground);
+}
+
+/*
+ * Motion, of which there is almost none outside the avatar.
+ *
+ *   crossfade  120ms on a route change, so a panel swap does not read as a flicker
+ *   sweep      a 2s hairline traverse that says polling is alive without a spinner
+ *   pulse      one slow breath on the top rule while the kill switch is engaged
+ *
+ * Anything more would be motion competing with the numbers for attention.
+ */
+@keyframes wgm-crossfade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes wgm-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(400%);
+  }
+}
+
+@keyframes wgm-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.crossfade {
+  animation: wgm-crossfade 120ms ease-out;
+}
+
+.sweep {
+  animation: wgm-sweep 2s linear infinite;
+}
+
+.breathe {
+  animation: wgm-breathe 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crossfade,
+  .sweep,
+  .breathe {
+    animation: none;
+  }
+  /* The sweep was the only sign that polling is alive, so without it the indicator falls
+     back to being simply present rather than moving. */
+  .sweep {
+    transform: none;
+    opacity: 0.5;
+  }
+}
+
+/* Scrollbars, quietly. A bright scrollbar on a dark dense table is the loudest thing on the
+   screen otherwise. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-input) transparent;
+}

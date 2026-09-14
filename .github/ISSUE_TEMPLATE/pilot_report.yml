@@ -92,6 +92,18 @@ body:
       required: false
 
   - type: textarea
+    id: console
+    attributes:
+      label: The console, if you used it
+      description: >
+        Which screen you actually opened, how often, and what number you wanted on it
+        and did not get. Whether you answered approvals there or by `curl`. This is the
+        one thing no test can tell us about the console: not whether it works, but
+        whether it shows the right five things.
+    validations:
+      required: false
+
+  - type: textarea
     id: wrong
     attributes:
       label: Anything expensive, wrong, or surprising

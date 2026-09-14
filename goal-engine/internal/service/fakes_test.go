@@ -340,6 +340,20 @@ func (f *fakeTasks) last() core.TaskRequest {
 	return f.requests[len(f.requests)-1]
 }
 
+// --- notifications ---
+
+type fakeNotifier struct {
+	sent []core.NotifyRequest
+	err  error
+}
+
+func (f *fakeNotifier) Notify(_ context.Context, req core.NotifyRequest) error {
+	// Recorded before the failure, so a test can assert that a doomed send was
+	// still attempted rather than skipped.
+	f.sent = append(f.sent, req)
+	return f.err
+}
+
 // --- spend ---
 
 // fakeSpend is both the store and the locked ledger, which mirrors the real

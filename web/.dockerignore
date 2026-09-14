@@ -1,0 +1,25 @@
+# What must not travel into the build context.
+#
+# node_modules first and for the obvious reason — the image installs its own from the
+# lockfile, and a Windows or macOS tree copied in would carry native bindings that do
+# not run on alpine.
+
+node_modules
+.next
+out
+next-env.d.ts
+*.tsbuildinfo
+
+# Real configuration. The image is built once and configured at run time; a .env.local
+# baked into a layer is a credential in an image registry.
+.env
+.env.local
+.env.*.local
+
+# Not needed to build or serve.
+Dockerfile
+.dockerignore
+.gitignore
+
+# Tests are deliberately NOT excluded. `next build` runs tsc over what is in the context,
+# and a context missing the test files would type-check less than CI does.

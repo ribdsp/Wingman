@@ -47,6 +47,7 @@ type fixture struct {
 	sampler   *memSampler
 	tasks     *memTasks
 	policies  *memPolicies
+	evals     *memEvaluations
 	registry  *metrics.Registry
 }
 
@@ -75,6 +76,7 @@ func newFixture(t *testing.T) *fixture {
 				Enabled:          true,
 			},
 		}},
+		evals:    newMemEvaluations(),
 		registry: testRegistry(t),
 	}
 
@@ -104,9 +106,15 @@ func newFixture(t *testing.T) *fixture {
 	if err != nil {
 		t.Fatalf("audit: %v", err)
 	}
+	evaluations, err := service.NewEvaluations(service.EvaluationsDeps{
+		Reader: f.evals, Goals: f.goals,
+	})
+	if err != nil {
+		t.Fatalf("evaluations: %v", err)
+	}
 	monitor, err := service.NewMonitor(service.MonitorDeps{
 		Goals: &monitorGoals{}, Samples: f.samples, LatestSample: f.samples,
-		Evaluations: memEvaluations{},
+		Evaluations: f.evals,
 		Dispatches:  memDispatches{}, Flags: f.flags, Audit: f.audit, Metrics: f.registry,
 		Sampler: f.sampler, Tasks: f.tasks, DefaultBotID: "bot-default",
 		DefaultChannelID: "channel-default", Clock: clock, Logger: log,
@@ -124,7 +132,8 @@ func newFixture(t *testing.T) *fixture {
 
 	h, err := New(Deps{
 		Goals: goals, Approvals: approvals, Flags: flags, Audit: auditLog,
-		Monitor: monitor, Samples: samples, Metrics: f.registry, Logger: log,
+		Evaluations: evaluations, Monitor: monitor, Samples: samples,
+		Metrics: f.registry, Logger: log,
 	})
 	if err != nil {
 		t.Fatalf("handler: %v", err)

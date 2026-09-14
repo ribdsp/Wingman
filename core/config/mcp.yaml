@@ -1,0 +1,69 @@
+# MCP servers — Wingman core.
+#
+# Owned by the operator, read once at startup, no API writes it. Adding a server here
+# makes its tools *visible*; it does not make any of them callable. What a run may
+# actually call is the list in config/tools.yaml, under the qualified names below. Both
+# steps are deliberate: a server that gains a capability overnight gains nothing here
+# until somebody writes it down.
+#
+# This is the whole reason core has no per-vendor integration marketplace. One protocol
+# client makes every MCP server in existence a tool source, and the servers are somebody
+# else's code to maintain rather than ours.
+#
+# Each entry:
+#
+#   name          lowercase letters, digits, _ or -, at most 20 characters. It becomes
+#                 part of every tool name this server offers, which is why it is short
+#   description   for whoever reads this file
+#   transport     stdio (default) | http
+#   command, args stdio only: the program to run and its arguments
+#   passEnv       stdio only: names of environment variables to hand the child
+#   url           http only: an absolute http or https endpoint
+#   authEnv       http only: the name of the variable holding the bearer token
+#   enabled       false leaves the declaration in place and does not connect
+#
+# Tools from a server called "github" are offered as mcp__github__<tool>. That is the
+# name to write in tools.yaml — start the service with LOG_LEVEL=debug to see the exact
+# list a server offers.
+#
+# ---- Secrets ---------------------------------------------------------------
+# passEnv and authEnv take variable NAMES, never values. `REPORTS_TOKEN=abc123` is
+# refused at startup, because it reads like it works and it would be committed.
+#
+# A stdio server is a child of this process, and this process holds the model API keys,
+# the database DSN and the goal engine's key. It is started with an allowlist — PATH,
+# HOME, TZ, TMPDIR, locale and the Windows equivalents, plus exactly what passEnv names —
+# and not with os.Environ(). An MCP server is the kind of component installed from a
+# registry without reading it; it gets what it needs and nothing else.
+#
+# ---- A server is code you are choosing to run ----------------------------
+# A stdio entry runs a program on this host, as this service's user, on every boot.
+# `npx -y some-package` fetches whatever that name resolves to today. Pin versions, and
+# prefer a server you can read.
+
+servers: []
+
+# ---------------------------------------------------------------------------
+# A worked example. Remove the empty list above when you use it, and remember that
+# nothing here is callable until tools.yaml grants it.
+# ---------------------------------------------------------------------------
+# servers:
+#   - name: github
+#     description: Issues and pull requests on the repositories that token can see
+#     transport: stdio
+#     command: npx
+#     args: ["-y", "@modelcontextprotocol/server-github@2026.8.1"]
+#     passEnv: ["GITHUB_TOKEN"]
+#
+#   - name: reports
+#     description: The internal reporting service, on this host's own network
+#     transport: http
+#     url: http://127.0.0.1:9000/mcp
+#     authEnv: REPORTS_TOKEN
+#
+#   - name: ads
+#     description: Campaign budgets. Its topup tool is class spend in tools.yaml
+#     transport: http
+#     url: https://ads.example.com/mcp
+#     authEnv: ADS_TOKEN
+#     enabled: false          # declared, and not connected to until you flip this

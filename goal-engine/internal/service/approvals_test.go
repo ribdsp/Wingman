@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ribdsp/wingman/goal-engine/internal/core"
 	"github.com/ribdsp/wingman/goal-engine/internal/domain"
 	"github.com/ribdsp/wingman/goal-engine/internal/repository"
 )
@@ -34,6 +35,7 @@ type approvalsFixture struct {
 	policies  *fakePolicies
 	flags     *fakeFlags
 	audit     *fakeAudit
+	notifier  *fakeNotifier
 }
 
 // newApprovalsFixture wires the gate with one policy in place.
@@ -49,6 +51,7 @@ func newApprovalsFixture(t *testing.T, policies ...domain.ApprovalPolicy) *appro
 		policies:  &fakePolicies{policies: byAction},
 		flags:     &fakeFlags{},
 		audit:     &fakeAudit{},
+		notifier:  &fakeNotifier{},
 	}
 
 	gate, err := NewApprovals(ApprovalsDeps{
@@ -57,6 +60,7 @@ func newApprovalsFixture(t *testing.T, policies ...domain.ApprovalPolicy) *appro
 		Policies:  f.policies,
 		Flags:     f.flags,
 		Audit:     f.audit,
+		Notices:   NewNotices(NoticesDeps{Notifier: f.notifier, ConsoleBaseURL: "https://console.wingman.test"}),
 		Clock:     fixedClock(testNow),
 	})
 	if err != nil {
@@ -769,6 +773,162 @@ func TestExpireOverdueReportsAFailedSweep(t *testing.T) {
 
 	if _, err := f.gate.ExpireOverdue(context.Background()); err == nil {
 		t.Fatal("expected the sweep failure to be reported")
+	}
+}
+
+// --- notifications ---
+//
+// A notification is the last thing Request does and the least important. These
+// tests fix which outcomes are worth waking somebody for, and prove that the
+// message cannot change the decision it describes.
+
+func TestRequestNotifiesAHumanOnlyWhenOneIsBeingAsked(t *testing.T) {
+	f := newApprovalsFixture(t, testPolicy())
+
+	record, err := f.gate.Request(context.Background(), spendReq(500_000))
+	if err != nil {
+		t.Fatalf("expected a decision, got %v", err)
+	}
+	if record.Outcome != domain.ApprovalPending {
+		t.Fatalf("expected a human to be asked, got %q", record.Outcome)
+	}
+	if len(f.notifier.sent) != 1 {
+		t.Fatalf("expected one notification, got %+v", f.notifier.sent)
+	}
+	sent := f.notifier.sent[0]
+	if sent.Kind != core.NotifyApprovalPending {
+		t.Fatalf("expected an approval notification, got %q", sent.Kind)
+	}
+	if sent.SubjectID != record.ID {
+		t.Fatalf("expected the notification to name the approval, got %q", sent.SubjectID)
+	}
+	// The deck, not a per-request screen: its first panel is the queue, which is what
+	// somebody woken by this message needs open.
+	if sent.Link != "https://console.wingman.test" {
+		t.Fatalf("expected a link to the console deck, got %q", sent.Link)
+	}
+	// The action type is a policy name an operator chose, and the difference between
+	// "the familiar gate again" and "something I have never seen".
+	if !strings.Contains(sent.Headline, testAction) {
+		t.Fatalf("expected the headline to name the action type, got %q", sent.Headline)
+	}
+}
+
+func TestRequestNotifiesNobodyAboutAnAutoApprovedSpend(t *testing.T) {
+	// Nobody is needed, and a stream of messages about spend that needed nobody is
+	// how the one that does need somebody gets skimmed past.
+	f := newApprovalsFixture(t, testPolicy())
+
+	record, err := f.gate.Request(context.Background(), spendReq(50_000))
+	if err != nil {
+		t.Fatalf("expected a decision, got %v", err)
+	}
+	if record.Outcome != domain.ApprovalAutoApproved {
+		t.Fatalf("expected auto-approval, got %q", record.Outcome)
+	}
+	if len(f.notifier.sent) != 0 {
+		t.Fatalf("expected no notification, got %+v", f.notifier.sent)
+	}
+}
+
+func TestRequestNotifiesNobodyAboutADenial(t *testing.T) {
+	// A denial is already over. There is nothing to decide and nothing a recipient
+	// could do about it from a phone; it is in the audit log for whoever reviews.
+	for _, tc := range []struct {
+		name  string
+		setup func(*approvalsFixture)
+		req   SpendRequest
+	}{
+		{"over the hard cap", func(*approvalsFixture) {}, spendReq(9_000_000)},
+		{"kill switch engaged", func(f *approvalsFixture) { f.flags.engaged = true }, spendReq(1)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newApprovalsFixture(t, testPolicy())
+			tc.setup(f)
+
+			record, err := f.gate.Request(context.Background(), tc.req)
+			if err != nil {
+				t.Fatalf("expected a recorded denial, got %v", err)
+			}
+			if record.Outcome != domain.ApprovalDenied {
+				t.Fatalf("expected a denial, got %q", record.Outcome)
+			}
+			if len(f.notifier.sent) != 0 {
+				t.Fatalf("expected no notification, got %+v", f.notifier.sent)
+			}
+		})
+	}
+}
+
+func TestRequestNotificationCarriesNoAmountOrCurrency(t *testing.T) {
+	// The message is retained on somebody else's servers, and a message complete
+	// enough to approve from invites approving from it. The figures are one click
+	// away, in the console, next to the policy and the day's total.
+	f := newApprovalsFixture(t, testPolicy())
+
+	if _, err := f.gate.Request(context.Background(), spendReq(500_000)); err != nil {
+		t.Fatalf("expected a decision, got %v", err)
+	}
+	if len(f.notifier.sent) != 1 {
+		t.Fatalf("expected one notification, got %+v", f.notifier.sent)
+	}
+	headline := f.notifier.sent[0].Headline
+	for _, r := range headline {
+		if r >= '0' && r <= '9' {
+			t.Fatalf("expected no figure in a headline, got %q", headline)
+		}
+	}
+	if strings.Contains(headline, "IDR") {
+		t.Fatalf("expected no currency in a headline, got %q", headline)
+	}
+}
+
+func TestRequestDecidesIdenticallyWhenTheNotifierFails(t *testing.T) {
+	// The decision is durable before the message is attempted. A chat platform being
+	// down must not turn a recorded pending request into an error the agent retries.
+	f := newApprovalsFixture(t, testPolicy())
+	f.notifier.err = errBoom
+
+	record, err := f.gate.Request(context.Background(), spendReq(500_000))
+	if err != nil {
+		t.Fatalf("expected the failed send to be swallowed, got %v", err)
+	}
+	if record.Outcome != domain.ApprovalPending {
+		t.Fatalf("expected the outcome to stand, got %q", record.Outcome)
+	}
+	if record.ExpiresAt == nil || !record.ExpiresAt.Equal(testNow.Add(DefaultApprovalTTL)) {
+		t.Fatalf("expected the deadline to stand, got %v", record.ExpiresAt)
+	}
+	if !f.audit.has(ActionApprovalDecided) {
+		t.Fatalf("expected the decision to be audited, got %v", f.audit.actions())
+	}
+	// Attempted, not skipped: the fake records before it fails.
+	if len(f.notifier.sent) != 1 {
+		t.Fatalf("expected the send to have been attempted, got %+v", f.notifier.sent)
+	}
+}
+
+func TestRequestDecidesIdenticallyWithNotificationsTurnedOff(t *testing.T) {
+	// NOTIFY_ENABLED=false is a nil *Notices, and the gate must not carry a question
+	// about messaging into the decision path at all.
+	f := newApprovalsFixture(t, testPolicy())
+	gate, err := NewApprovals(ApprovalsDeps{
+		Approvals: f.approvals, Spend: f.spend, Policies: f.policies,
+		Flags: f.flags, Audit: f.audit, Clock: fixedClock(testNow),
+	})
+	if err != nil {
+		t.Fatalf("expected a gate, got %v", err)
+	}
+
+	record, err := gate.Request(context.Background(), spendReq(500_000))
+	if err != nil {
+		t.Fatalf("expected a decision, got %v", err)
+	}
+	if record.Outcome != domain.ApprovalPending {
+		t.Fatalf("expected a human to be asked, got %q", record.Outcome)
+	}
+	if len(f.notifier.sent) != 0 {
+		t.Fatalf("expected nothing sent, got %+v", f.notifier.sent)
 	}
 }
 

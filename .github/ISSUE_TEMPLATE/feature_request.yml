@@ -1,11 +1,12 @@
 name: Feature or change proposal
-description: Propose something the goal engine should do, or a default it should change.
+description: Propose something Wingman should do, or a default it should change.
 labels: [proposal]
 body:
   - type: markdown
     attributes:
       value: |
-        The goal engine is deliberately small, and
+        The goal engine is deliberately small, core is not much larger, the console
+        decides nothing on purpose, and
         [the roadmap](https://github.com/ribdsp/wingman/blob/main/docs/roadmap.md#deliberately-absent)
         lists things that are absent on purpose rather than by omission. That does
         not mean the list is closed — it means reversing one takes an argument.
@@ -82,4 +83,5 @@ body:
         - label: It changes who may engage or release the kill switch
         - label: It adds a way to modify or delete an audit row
         - label: It changes what happens when something cannot be read
+        - label: It puts a credential in the console's environment, widens what the console forwards, or moves a read into the browser
         - label: None of the above

@@ -457,10 +457,75 @@ func (m *memSamples) Latest(_ context.Context, metricKey string) (repository.Sam
 	return repository.SampleRecord{}, repository.ErrNotFound
 }
 
-type memEvaluations struct{}
+type memEvaluations struct {
+	mu      sync.Mutex
+	records []repository.EvaluationRecord
+	listErr error
+}
 
-func (memEvaluations) Insert(_ context.Context, eval domain.Evaluation, _ *int64) (repository.EvaluationRecord, error) {
-	return repository.EvaluationRecord{ID: "eval-1", Evaluation: eval}, nil
+func newMemEvaluations() *memEvaluations { return &memEvaluations{} }
+
+func (m *memEvaluations) Insert(_ context.Context, eval domain.Evaluation, sampleID *int64) (repository.EvaluationRecord, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	record := repository.EvaluationRecord{
+		ID:         "eval-" + itoa(len(m.records)+1),
+		Evaluation: eval,
+		SampleID:   sampleID,
+		CreatedAt:  testNow,
+	}
+	m.records = append(m.records, record)
+	return record, nil
+}
+
+func (m *memEvaluations) ListByGoal(_ context.Context, goalID string, limit, offset int) ([]repository.EvaluationRecord, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.listErr != nil {
+		return nil, 0, m.listErr
+	}
+	matched := []repository.EvaluationRecord{}
+	// Newest first, matching the query this stands in for.
+	for i := len(m.records) - 1; i >= 0; i-- {
+		if m.records[i].GoalID == goalID {
+			matched = append(matched, m.records[i])
+		}
+	}
+	return pageOfEvaluations(matched, limit, offset), len(matched), nil
+}
+
+func (m *memEvaluations) LatestPerGoal(_ context.Context, limit, offset int) ([]repository.EvaluationRecord, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.listErr != nil {
+		return nil, 0, m.listErr
+	}
+	// One row per goal, the newest, newest goal first — what DISTINCT ON plus the
+	// outer ORDER BY produce. The fake reproduces the shape rather than the SQL,
+	// which is what the handler tests are about; the query itself is asserted in
+	// internal/repository.
+	seen := map[string]bool{}
+	latest := []repository.EvaluationRecord{}
+	for i := len(m.records) - 1; i >= 0; i-- {
+		record := m.records[i]
+		if seen[record.GoalID] {
+			continue
+		}
+		seen[record.GoalID] = true
+		latest = append(latest, record)
+	}
+	return pageOfEvaluations(latest, limit, offset), len(latest), nil
+}
+
+func pageOfEvaluations(records []repository.EvaluationRecord, limit, offset int) []repository.EvaluationRecord {
+	if offset >= len(records) {
+		return nil
+	}
+	end := len(records)
+	if limit > 0 && offset+limit < end {
+		end = offset + limit
+	}
+	return records[offset:end]
 }
 
 type memDispatches struct{}

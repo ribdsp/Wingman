@@ -60,6 +60,23 @@ type EvaluationStore interface {
 	Insert(ctx context.Context, eval domain.Evaluation, sampleID *int64) (repository.EvaluationRecord, error)
 }
 
+// EvaluationReader reads recorded evaluations back.
+//
+// Separate from EvaluationStore for the same reason AuditReader is separate from
+// AuditSink: the monitor writes verdicts as it reaches them and never queries them
+// back, and nothing serving a read endpoint may be able to insert one.
+type EvaluationReader interface {
+	ListByGoal(ctx context.Context, goalID string, limit, offset int) ([]repository.EvaluationRecord, int, error)
+	LatestPerGoal(ctx context.Context, limit, offset int) ([]repository.EvaluationRecord, int, error)
+}
+
+// GoalLookup resolves a goal id to the stored goal, and nothing else. One method,
+// because its only caller needs to tell "this goal has no history yet" from "there
+// is no such goal" — not to change anything it finds.
+type GoalLookup interface {
+	GetByID(ctx context.Context, id string) (repository.GoalRecord, error)
+}
+
 // DispatchStore tracks agent tasks this service asked core to run.
 type DispatchStore interface {
 	History(ctx context.Context, goalID string, periodStart time.Time) (repository.DispatchHistory, error)
@@ -109,6 +126,18 @@ type Sampler interface {
 // TaskCreator wakes an agent in Wingman core.
 type TaskCreator interface {
 	CreateTask(ctx context.Context, req core.TaskRequest) (core.TaskResponse, error)
+}
+
+// Notifier tells Wingman core that something happened which a human should hear
+// about. Core resolves who that is and reaches them on a chat platform; this
+// service never learns either.
+//
+// Separate from TaskCreator, though one client satisfies both, because the two
+// calls have opposite failure contracts: a lost task means work that will not
+// happen and is worth an error, while a lost notification is a message nobody
+// reads and must not disturb the decision it describes.
+type Notifier interface {
+	Notify(ctx context.Context, req core.NotifyRequest) error
 }
 
 // SpendStore is the ledger the daily cap is checked against.

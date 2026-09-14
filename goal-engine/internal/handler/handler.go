@@ -59,27 +59,29 @@ func (r jsonRaw) MarshalJSON() ([]byte, error) {
 // system but checked at construction: a route wired to a nil service would panic
 // on the first request instead of failing at startup.
 type Deps struct {
-	Goals     *service.Goals
-	Approvals *service.Approvals
-	Flags     *service.Flags
-	Audit     *service.AuditLog
-	Monitor   *service.Monitor
-	Samples   *service.Samples
-	Metrics   *metrics.Registry
+	Goals       *service.Goals
+	Approvals   *service.Approvals
+	Flags       *service.Flags
+	Audit       *service.AuditLog
+	Evaluations *service.Evaluations
+	Monitor     *service.Monitor
+	Samples     *service.Samples
+	Metrics     *metrics.Registry
 
 	Logger zerolog.Logger
 }
 
 // Handler holds the services the routes call.
 type Handler struct {
-	goals     *service.Goals
-	approvals *service.Approvals
-	flags     *service.Flags
-	audit     *service.AuditLog
-	monitor   *service.Monitor
-	samples   *service.Samples
-	metrics   *metrics.Registry
-	log       zerolog.Logger
+	goals       *service.Goals
+	approvals   *service.Approvals
+	flags       *service.Flags
+	audit       *service.AuditLog
+	evaluations *service.Evaluations
+	monitor     *service.Monitor
+	samples     *service.Samples
+	metrics     *metrics.Registry
+	log         zerolog.Logger
 }
 
 // New validates its wiring and returns a ready handler set.
@@ -94,6 +96,7 @@ func New(deps Deps) (*Handler, error) {
 	require(deps.Approvals != nil, "Approvals")
 	require(deps.Flags != nil, "Flags")
 	require(deps.Audit != nil, "Audit")
+	require(deps.Evaluations != nil, "Evaluations")
 	require(deps.Monitor != nil, "Monitor")
 	require(deps.Samples != nil, "Samples")
 	require(deps.Metrics != nil, "Metrics")
@@ -102,14 +105,15 @@ func New(deps Deps) (*Handler, error) {
 	}
 
 	return &Handler{
-		goals:     deps.Goals,
-		approvals: deps.Approvals,
-		flags:     deps.Flags,
-		audit:     deps.Audit,
-		monitor:   deps.Monitor,
-		samples:   deps.Samples,
-		metrics:   deps.Metrics,
-		log:       deps.Logger,
+		goals:       deps.Goals,
+		approvals:   deps.Approvals,
+		flags:       deps.Flags,
+		audit:       deps.Audit,
+		evaluations: deps.Evaluations,
+		monitor:     deps.Monitor,
+		samples:     deps.Samples,
+		metrics:     deps.Metrics,
+		log:         deps.Logger,
 	}, nil
 }
 

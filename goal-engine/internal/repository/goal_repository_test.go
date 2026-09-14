@@ -493,3 +493,47 @@ func TestEvaluationRepositoryListByGoalPaginates(t *testing.T) {
 		t.Fatalf("unexpected result: total=%d records=%d", total, len(records))
 	}
 }
+
+func TestEvaluationRepositoryLatestPerGoalKeepsTheNewestRowPerGoal(t *testing.T) {
+	// Two things in this query are load-bearing and neither would fail loudly if it
+	// were dropped: DISTINCT ON (goal_id) is what makes it one row per goal, and the
+	// inner ORDER BY is what makes the row it keeps the newest one. Without them a
+	// dashboard would quietly show last week's pace, which is worse than showing
+	// none.
+	db, mock := newTestDB(t)
+	repo := NewEvaluationRepository(db)
+	mock.ExpectQuery("SELECT count\\(DISTINCT goal_id\\) FROM goal_evaluations").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(3))
+	mock.ExpectQuery("(?s)DISTINCT ON \\(goal_id\\).+ORDER BY goal_id, evaluated_at DESC").
+		WithArgs(10, 0).
+		WillReturnRows(addEvaluationRow(evaluationSQLRows(), nil, "trigger"))
+
+	records, total, err := repo.LatestPerGoal(context.Background(), 10, 0)
+	if err != nil {
+		t.Fatalf("expected a listing, got %v", err)
+	}
+	if total != 3 {
+		t.Fatalf("expected the count to be over distinct goals, got %d", total)
+	}
+	if len(records) != 1 || records[0].Decision != domain.DecisionTrigger {
+		t.Fatalf("unexpected result: %+v", records)
+	}
+}
+
+func TestEvaluationRepositoryLatestPerGoalOrdersThePageByRecency(t *testing.T) {
+	// DISTINCT ON forces the inner query to order by goal_id first, so the ordering
+	// a caller actually sees has to be applied outside it. Asserting the outer
+	// clause separately is the only way to catch a rewrite that collapses the two
+	// and leaves the page sorted by an opaque uuid.
+	db, mock := newTestDB(t)
+	repo := NewEvaluationRepository(db)
+	mock.ExpectQuery("SELECT count\\(DISTINCT goal_id\\) FROM goal_evaluations").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+	mock.ExpectQuery("(?s)\\) latest.+ORDER BY evaluated_at DESC, id DESC.+LIMIT \\$1 OFFSET \\$2").
+		WithArgs(defaultPageLimit, 0).
+		WillReturnRows(addEvaluationRow(evaluationSQLRows(), nil, "noop"))
+
+	if _, _, err := repo.LatestPerGoal(context.Background(), 0, -5); err != nil {
+		t.Fatalf("expected an unbounded request to be normalised, got %v", err)
+	}
+}

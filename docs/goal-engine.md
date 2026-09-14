@@ -11,6 +11,7 @@ without asking. This document is the model; [api.md](api.md) is the interface.
 - [The spending gate](#the-spending-gate)
 - [The kill switch](#the-kill-switch)
 - [The audit log](#the-audit-log)
+- [Telling a human](#telling-a-human)
 - [Worked example](#worked-example)
 
 ## A goal
@@ -105,6 +106,37 @@ the same record. A goal whose metric is broken shows up as
 Every branch — including the ones that did nothing — writes a row to
 `goal_evaluations` with its reason string. A monitor that only records its
 interventions cannot answer "was it watching?".
+
+## Reading the verdicts back
+
+Those rows are readable, and reading them is the only supported way to know where a
+goal stands:
+
+| | |
+|---|---|
+| `GET /v1/goals/:id/evaluations` | one goal's history, newest first |
+| `GET /v1/evaluations/latest` | the newest evaluation of every goal that has one |
+
+Neither route can write. There is no insert method on the service at all — same rule
+as the audit log, for a sharper reason: a row here is a verdict, and a verdict that no
+recorded observation supports is worse than no verdict.
+
+**Do not recompute pace.** `paceRatio` as this service computed it is what decided
+whether an agent was woken. A dashboard dividing progress by elapsed time for itself
+would eventually disagree — different rounding, a different idea of "now", a baseline
+captured at a moment it cannot see — and the disagreement would surface as two
+plausible numbers with no error between them, which is the failure mode an operator
+cannot debug.
+
+A goal the monitor has not reached yet is **absent** from `/v1/evaluations/latest`
+rather than present with zeroed numbers. Zero pace reads as catastrophically behind, a
+pace of one as on track, and neither is true of a goal that has never been evaluated.
+An unknown goal id on the history route is a `404`, not an empty page, for the mirror
+of that reason: an empty page means "never once successfully evaluated", which is a
+real state worth alarming about.
+
+Reading the last verdict never runs a new one. `POST /v1/monitor/tick` is the route
+that evaluates, and it is separate on purpose.
 
 ## Rate limits on autonomy
 
@@ -233,6 +265,48 @@ An audit write that fails is logged loudly but does not roll back the action it 
 recording — a spend that has already been approved is not un-approved by a failed
 insert. That trade-off is deliberate and it is the one place where the log can be
 incomplete; the service log is the backstop.
+
+## Telling a human
+
+Off by default (`NOTIFY_ENABLED=false`), like `TRIGGER_DRY_RUN` and for the same reason:
+one line turns it on, and the honest default is the quiet one.
+
+Two moments produce a notification, and both fire *after* the decision they describe is
+already durable:
+
+| When | Headline |
+|---|---|
+| A trigger was dispatched — the row is marked sent and the audit entry is written | `A goal fell behind pace and an agent has been woken.` |
+| A spend request came back `pending`, and only `pending` | `A spend is waiting for a decision (<actionType>).` |
+
+`auto_approved` and `denied` send nothing. An approval that resolved itself is not news,
+and a refusal is already recorded where refusals are read.
+
+**A notification carries no figure.** No amount, no currency, no observed value, no pace
+ratio — a test asserts a headline contains no digit at all. Two reasons, both worth the
+constraint. A chat message is retained on somebody else's servers for as long as they
+like, while this project's whole posture is that the business numbers stay on the box. And
+a message complete enough to decide from invites deciding from it: approving a spend at a
+glance, without the policy, the day's total or the payload in front of you, is the failure
+this system is most exposed to. The link is what makes you open the console, where all of
+that is. `WEB_BASE_URL` is what builds it; unset, the message goes out without a link
+rather than with a broken one.
+
+**It can never affect a decision.** The engine does not own a channel stack — it posts one
+line to core, which owns Telegram, Slack and Discord already, and core decides who to tell
+and on which platform. That call is best effort: nothing is retried, nothing is queued,
+there is no new table in either database, and a failure is logged and dropped. The same
+trade-off `appendAudit` makes, for the same reason — by the time it runs, the thing it
+describes has happened, so returning an error would only make a caller retry something
+that must not be repeated.
+
+A lost message already has a better safety net than a retry: the approval is still in the
+queue, the console still shows it, and its TTL still expires it. What is lost is a prompt,
+never a decision.
+
+There is also **no new audit action and no tenth error code.** The audit log is a log of
+decisions and a ping is not one; "was I told?" is answered by a structured log line
+carrying the kind, the subject id and whether a retry could have helped.
 
 ## Worked example
 

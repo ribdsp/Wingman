@@ -47,6 +47,62 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	if !strings.HasPrefix(cfg.APIKeys[0].Name, "key-") {
 		t.Fatalf("expected an unnamed key to be fingerprinted, got %q", cfg.APIKeys[0].Name)
 	}
+	// An install that has not asked to be messaged is not messaged.
+	if cfg.Notify.Enabled {
+		t.Fatal("expected notifications to be off by default")
+	}
+	if cfg.Notify.ConsoleBaseURL != "" {
+		t.Fatalf("expected no console url by default, got %q", cfg.Notify.ConsoleBaseURL)
+	}
+}
+
+func TestLoadParsesNotificationSettings(t *testing.T) {
+	setValidEnv(t)
+	t.Setenv("NOTIFY_ENABLED", "true")
+	t.Setenv("WEB_BASE_URL", "https://console.wingman.test/")
+	t.Setenv("WINGMAN_CORE_NOTIFY_PATH", "/v2/notifications")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+
+	if !cfg.Notify.Enabled {
+		t.Fatal("expected notifications to be enabled")
+	}
+	// Trimmed here so the link is not built with a doubled slash.
+	if cfg.Notify.ConsoleBaseURL != "https://console.wingman.test" {
+		t.Fatalf("unexpected console url %q", cfg.Notify.ConsoleBaseURL)
+	}
+	if cfg.Core.NotifyPath != "/v2/notifications" {
+		t.Fatalf("unexpected notify path %q", cfg.Core.NotifyPath)
+	}
+}
+
+func TestLoadRejectsAConsoleURLWithoutAScheme(t *testing.T) {
+	// A link the recipient cannot open teaches them to ignore the ones that work.
+	setValidEnv(t)
+	t.Setenv("NOTIFY_ENABLED", "true")
+	t.Setenv("WEB_BASE_URL", "console.wingman.test")
+
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "WEB_BASE_URL") {
+		t.Fatalf("expected WEB_BASE_URL to be rejected, got %v", err)
+	}
+}
+
+func TestLoadAllowsNotificationsWithNoConsoleURL(t *testing.T) {
+	// The link is a convenience. Refusing to boot without one would mean an
+	// operator who runs no console cannot be told anything at all.
+	setValidEnv(t)
+	t.Setenv("NOTIFY_ENABLED", "true")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("expected config to load without a console url, got %v", err)
+	}
+	if !cfg.Notify.Enabled || cfg.Notify.ConsoleBaseURL != "" {
+		t.Fatalf("unexpected notify config %+v", cfg.Notify)
+	}
 }
 
 func TestLoadParsesOverrides(t *testing.T) {

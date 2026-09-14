@@ -61,6 +61,7 @@ type Config struct {
 
 	Core    CoreConfig
 	Monitor MonitorConfig
+	Notify  NotifyConfig
 
 	// RateLimit bounds how fast one caller may hit the API.
 	RateLimit RateLimitConfig
@@ -127,16 +128,18 @@ const (
 	RoleBot Role = "bot"
 )
 
-// CoreConfig points at the Wingman core (the Rakazo fork) that the trigger
-// bridge tasks.
+// CoreConfig points at the Wingman core that the trigger bridge tasks.
 type CoreConfig struct {
 	BaseURL string
 	APIKey  string
 	Timeout time.Duration
-	// TaskPath overrides the path a task is created at. It exists because the core
-	// is a fork: an operator who renamed the route should not have to fork this
-	// service too.
+	// TaskPath overrides the path a task is created at. The two services deploy
+	// independently, so a route that moves over there should be a config edit here
+	// rather than a redeploy of this one.
 	TaskPath string
+	// NotifyPath overrides the path a notification is posted to, for the same
+	// reason TaskPath exists.
+	NotifyPath string
 	// DefaultBotID and DefaultChannelID are used when a goal names no bot of its
 	// own, so a goal created without one can still be acted on.
 	DefaultBotID     string
@@ -155,6 +158,22 @@ type RateLimitConfig struct {
 	RPS float64
 	// Burst is how many requests may arrive at once before throttling starts.
 	Burst int
+}
+
+// NotifyConfig controls whether the engine tells a human that something happened.
+//
+// It carries no recipient: who to tell is core's business, resolved from the
+// account CORE_UNATTENDED_OWNER names and the chat identities linked to it. This
+// service knows what happened, not who cares.
+type NotifyConfig struct {
+	// Enabled is false by default, like TRIGGER_DRY_RUN's caution and
+	// CHANNEL_ALLOW_GROUPS's: an install that has not asked to be messaged is not
+	// messaged.
+	Enabled bool
+	// ConsoleBaseURL is where the console is reachable, used to build the link a
+	// notification carries. Optional — when it is unset the message goes out
+	// without a link rather than with a broken one.
+	ConsoleBaseURL string
 }
 
 // MonitorConfig controls the scheduled metric monitor.
@@ -226,6 +245,7 @@ func Load() (Config, error) {
 		APIKey:           strings.TrimSpace(os.Getenv("WINGMAN_CORE_API_KEY")),
 		Timeout:          durationEnv("WINGMAN_CORE_TIMEOUT", defaultCoreTimeout, fail),
 		TaskPath:         strings.TrimSpace(os.Getenv("WINGMAN_CORE_TASK_PATH")),
+		NotifyPath:       strings.TrimSpace(os.Getenv("WINGMAN_CORE_NOTIFY_PATH")),
 		DefaultBotID:     strings.TrimSpace(os.Getenv("WINGMAN_DEFAULT_BOT_ID")),
 		DefaultChannelID: strings.TrimSpace(os.Getenv("WINGMAN_DEFAULT_CHANNEL_ID")),
 		DryRun:           boolEnv("TRIGGER_DRY_RUN", false, fail),
@@ -237,6 +257,18 @@ func Load() (Config, error) {
 	}
 	if cfg.Core.APIKey == "" && !cfg.Core.DryRun {
 		fail("WINGMAN_CORE_API_KEY is required unless TRIGGER_DRY_RUN=true")
+	}
+
+	cfg.Notify = NotifyConfig{
+		Enabled:        boolEnv("NOTIFY_ENABLED", false, fail),
+		ConsoleBaseURL: strings.TrimRight(strings.TrimSpace(os.Getenv("WEB_BASE_URL")), "/"),
+	}
+	if cfg.Notify.ConsoleBaseURL != "" &&
+		!strings.HasPrefix(cfg.Notify.ConsoleBaseURL, "http://") &&
+		!strings.HasPrefix(cfg.Notify.ConsoleBaseURL, "https://") {
+		// A link that does not resolve is worse than no link: the recipient stops
+		// trusting the ones that do.
+		fail("WEB_BASE_URL must start with http:// or https://")
 	}
 
 	cfg.Monitor = MonitorConfig{

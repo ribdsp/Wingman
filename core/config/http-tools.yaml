@@ -1,0 +1,103 @@
+# HTTP APIs offered as tools — Wingman core.
+#
+# Owned by the operator, read once at startup, no API writes it. For an API that has no
+# MCP server: you declare the endpoints you are willing to have called, and each one
+# becomes a tool. As with MCP, declaring an endpoint here makes it visible — it is
+# callable only once config/tools.yaml grants it by name.
+#
+# Every endpoint is written out by hand, and that is the point. Compiling an OpenAPI
+# document straight into tools would let whoever publishes that document decide what an
+# autonomous agent may attempt, and a vendor adding a DELETE /accounts/{id} in a minor
+# release would be adding it here. What this file holds is what such a document compiles
+# down to, with you as the compiler.
+#
+# Each service:
+#
+#   name          lowercase letters, digits, _ or -
+#   baseUrl       absolute http or https, no query string, no credentials in it
+#   authEnv       the NAME of the environment variable holding the credential
+#   authHeader    the header it is sent in. "Authorization" by default
+#   authPrefix    what precedes it in that header. "Bearer" by default; an explicitly
+#                 empty string sends the bare token, and "Basic" covers basic auth
+#   timeout       one request to this API. 1s-2m, 20s by default
+#   enabled       false leaves the declaration in place and offers nothing
+#   tools         the endpoints. A service that declares none is an error, because a
+#                 connected API with nothing callable reads as though it were working
+#
+# Each tool:
+#
+#   name          unique across every service in this file — one name is one grant in
+#                 tools.yaml, so two services cannot both offer get_invoice
+#   description   required. It is the entire interface as far as the model is concerned:
+#                 an endpoint without one is either never called or called wrongly
+#   method        GET (default), POST, PUT or PATCH
+#   path          a template relative to baseUrl, with {placeholders}
+#   parameters    each with in: path | query (query by default)
+#   bodyDescription  set it and the model is offered a `body` object sent as JSON. Left
+#                 empty the endpoint takes no body, and one the model tried to send is
+#                 dropped rather than forwarded
+#
+# No DELETE. Not because it is harder, but because a destructive endpoint on a
+# GET-shaped tool call is the most expensive mistake this file could enable; an API that
+# genuinely needs one usually offers a POST-shaped equivalent. Removing that restriction
+# needs an argument, not a diff.
+#
+# Path templates are checked both ways at startup: a {placeholder} with no declared
+# parameter, or a path parameter that appears nowhere in the path, is an error. Either
+# mismatch would otherwise produce a request that is wrong rather than one that fails.
+# A path may not start with //, contain .., or carry a query string — the first would
+# send your credential to another host entirely.
+#
+# ---- Secrets ---------------------------------------------------------------
+# authEnv takes a variable NAME. The credential itself is never in this file, and
+# `TOKEN=abc123` is refused at startup. baseUrl carrying https://user:pass@host is
+# refused for the same reason — that is what authEnv plus authPrefix: Basic is for.
+
+services: []
+
+# ---------------------------------------------------------------------------
+# A worked example. Remove the empty list above when you use it, and remember that
+# nothing here is callable until tools.yaml grants it by name.
+# ---------------------------------------------------------------------------
+# services:
+#   - name: billing
+#     baseUrl: https://billing.example.com
+#     authEnv: BILLING_TOKEN
+#     timeout: 20s
+#     tools:
+#       - name: get_invoice
+#         description: Fetch one invoice by its id, including its line items and status
+#         method: GET
+#         path: /v1/invoices/{invoiceId}
+#         parameters:
+#           - name: invoiceId
+#             in: path
+#             description: The invoice id, as it appears in the billing dashboard
+#
+#       - name: list_overdue_invoices
+#         description: Invoices past their due date, most overdue first
+#         method: GET
+#         path: /v1/invoices
+#         parameters:
+#           - name: status
+#             in: query
+#             description: Always "overdue" for this report
+#             required: true
+#           - name: limit
+#             in: query
+#             description: How many to return, at most 100
+#             required: false
+#
+#       - name: send_invoice_reminder
+#         description: Email the customer a reminder about an unpaid invoice
+#         method: POST
+#         path: /v1/invoices/{invoiceId}/reminders
+#         parameters:
+#           - name: invoiceId
+#             in: path
+#             description: The invoice to remind about
+#         bodyDescription: >
+#           An object with an optional "note" string, added to the email above the
+#           invoice summary. Keep it to one sentence.
+#         # This one writes: somebody else receives an email. Grant it class write in
+#         # tools.yaml, and it will be refused on an unattended run.

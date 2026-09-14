@@ -146,3 +146,47 @@ func (r *EvaluationRepository) ListByGoal(ctx context.Context, goalID string, li
 	}
 	return records, total, nil
 }
+
+// LatestPerGoal returns the most recent evaluation of every goal that has one,
+// newest first.
+//
+// One query rather than one per goal, because this is the query a dashboard opens
+// with. DISTINCT ON is Postgres-specific and deliberate: it reaches for the
+// (goal_id, evaluated_at DESC) index the migration declares, so the cost does not
+// grow with how much history each goal has accumulated.
+//
+// Goals that have never been evaluated are absent rather than present with zeroed
+// numbers. A goal the monitor has not reached yet has no pace, and inventing one
+// for it would render as on track.
+func (r *EvaluationRepository) LatestPerGoal(ctx context.Context, limit, offset int) ([]EvaluationRecord, int, error) {
+	const countQuery = `SELECT count(DISTINCT goal_id) FROM goal_evaluations`
+	// DISTINCT ON requires the inner ORDER BY to lead with goal_id, so the ordering
+	// a caller actually reads has to be applied outside it. Collapsing the two would
+	// leave the page sorted by an opaque uuid.
+	const listQuery = `
+		SELECT ` + evaluationColumns + `
+		FROM (
+			SELECT DISTINCT ON (goal_id) ` + evaluationColumns + `
+			FROM goal_evaluations
+			ORDER BY goal_id, evaluated_at DESC, id DESC
+		) latest
+		ORDER BY evaluated_at DESC, id DESC
+		LIMIT $1 OFFSET $2`
+
+	var total int
+	if err := r.db.QueryRowContext(ctx, countQuery).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count evaluated goals: %w", classify(err))
+	}
+
+	limit, offset = normalisePage(limit, offset)
+	rows := []evaluationRow{}
+	if err := r.db.SelectContext(ctx, &rows, listQuery, limit, offset); err != nil {
+		return nil, 0, fmt.Errorf("list latest evaluations: %w", classify(err))
+	}
+
+	records := make([]EvaluationRecord, 0, len(rows))
+	for _, row := range rows {
+		records = append(records, row.toRecord())
+	}
+	return records, total, nil
+}

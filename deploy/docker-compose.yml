@@ -1,21 +1,39 @@
-# Wingman — self-hosted stack.
+# Wingman — self-hosted stack: three services, two databases.
 #
 #   cd deploy
-#   cp ../goal-engine/.env.example .env     # then fill it in
+#   cp .env.example                 .env               # the stack's own settings
+#   cp ../goal-engine/.env.example  .env.goal-engine   # the engine's keys
+#   cp ../core/.env.example         .env.core          # core's keys
+#   cp ../web/.env.example          .env.web           # the console's bot key and cookie secret
+#   $EDITOR .env .env.goal-engine .env.core .env.web
 #   docker compose up -d --build
 #
-# What this file starts is the goal engine and its database. Wingman core — the
-# Rakazo fork — is a separate service with its own compose file, provisioned by
-# scripts/fork-core.sh; the commented block at the bottom joins the two.
+# Then make core's first account, because registration is closed by default:
 #
-# Two deliberate choices worth reading before you deploy this on a VPS:
+#   read -rs PW && printf '%s' "$PW" | docker compose exec -T core \
+#     /app/core createuser -email you@example.com -name 'Your Name'
 #
-#   Published ports are bound to 127.0.0.1. Docker writes its own iptables rules
-#   and a plain "ports: 8080:8080" would reach the internet through a ufw that
-#   says otherwise. Put a reverse proxy in front and set TRUSTED_PROXIES.
+# That account is what signs in at http://127.0.0.1:3000.
 #
-#   The database password has no default. Compose refuses to start without one
-#   rather than fall back to something guessable.
+# Choices worth reading before this goes on a VPS:
+#
+#   Four environment files, not one. Each service is handed only its own. The goal
+#   engine holds the operator keys that approve spending; core is a client of that
+#   API and asks to spend; the console holds a bot key and no operator key at all.
+#   Mounting one shared file into all of them would put the approving credential
+#   inside the services that ask, which is the whole property the split between them
+#   exists to have.
+#
+#   Published ports are bound to 127.0.0.1. Docker writes its own iptables rules and
+#   a plain "ports: 8080:8080" would reach the internet through a ufw that says
+#   otherwise. Put a reverse proxy in front and set TRUSTED_PROXIES.
+#
+#   Neither database password has a default. Compose refuses to start without one
+#   rather than fall back to something guessable. Neither database is published.
+#
+#   Keep TRIGGER_DRY_RUN=true in .env.goal-engine until you have watched a week of
+#   what the engine wants to do. The audit log fills up either way; only the tasks
+#   stop.
 
 name: wingman
 
@@ -54,13 +72,16 @@ services:
       goal-db:
         condition: service_healthy
     env_file:
-      - .env
+      - .env.goal-engine
     environment:
-      # Set here, not in .env: inside this network the database is "goal-db", and a
-      # DATABASE_URL copied from a developer's machine would point at a localhost
-      # that means the container itself.
+      # Set here, not in the env file: inside this network the database is "goal-db",
+      # and a DATABASE_URL copied from a developer's machine would point at a
+      # localhost that means the container itself.
       DATABASE_URL: postgres://${POSTGRES_USER:-wingman}:${POSTGRES_PASSWORD}@goal-db:5432/${POSTGRES_DB:-wingman_goals}?sslmode=disable
       PORT: "8080"
+      # Same reasoning in the other direction: the trigger bridge reaches core by
+      # service name here, never by the localhost in the example file.
+      WINGMAN_CORE_BASE_URL: http://core:8081
     ports:
       - "127.0.0.1:${GOAL_ENGINE_PORT:-8080}:8080"
     volumes:
@@ -78,29 +99,112 @@ services:
       retries: 3
       start_period: 45s
 
+  core-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CORE_POSTGRES_DB:-wingman_core}
+      POSTGRES_USER: ${CORE_POSTGRES_USER:-wingman}
+      POSTGRES_PASSWORD: ${CORE_POSTGRES_PASSWORD:?set CORE_POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - core-db-data:/var/lib/postgresql/data
+    # Not published either. A second Postgres rather than a second schema in the
+    # first one: this holds accounts, chats and transcripts, that one holds the audit
+    # trail and the approval queue, and losing one should not mean losing the other.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CORE_POSTGRES_USER:-wingman} -d ${CORE_POSTGRES_DB:-wingman_core}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  core:
+    build:
+      context: ../core
+      args:
+        VERSION: ${WINGMAN_VERSION:-dev}
+    image: wingman/core:${WINGMAN_VERSION:-dev}
+    restart: unless-stopped
+    depends_on:
+      core-db:
+        condition: service_healthy
+    env_file:
+      - .env.core
+    environment:
+      DATABASE_URL: postgres://${CORE_POSTGRES_USER:-wingman}:${CORE_POSTGRES_PASSWORD}@core-db:5432/${CORE_POSTGRES_DB:-wingman_core}?sslmode=disable
+      PORT: "8081"
+      # The engine is reached by service name, and the key in .env.core must appear in
+      # the engine's GOAL_ENGINE_BOT_KEYS — not its API keys. Core asks to spend.
+      GOAL_ENGINE_BASE_URL: http://goal-engine:8080
+      # The one setting that must be identical inside and outside this container.
+      # SANDBOX_BACKEND=docker makes core ask the HOST's daemon for a sibling
+      # container, and the daemon resolves a bind mount against the host's filesystem.
+      # If core says /app/workspaces and the host has no such directory, the sandbox
+      # gets an empty /workspace and the agent quietly finds nothing.
+      SANDBOX_WORKSPACE_ROOT: ${CORE_WORKSPACE_DIR:-/srv/wingman/workspaces}
+    ports:
+      - "127.0.0.1:${CORE_PORT:-8081}:8081"
+    volumes:
+      # What an agent may do, read-only. There is no API that writes any of these,
+      # and a service that could write them would be granting itself tools.
+      - ../core/config:/app/config:ro
+      # Same path on both sides. See SANDBOX_WORKSPACE_ROOT above. The host directory
+      # has to exist and be owned by 65532 before the first `up`; the image overrides
+      # its own /workspaces default with this one.
+      - ${CORE_WORKSPACE_DIR:-/srv/wingman/workspaces}:${CORE_WORKSPACE_DIR:-/srv/wingman/workspaces}
+      # The docker socket, so core can start a sandbox container. Read-only on the
+      # mount stops nothing — the socket is an API, and asking it to start a
+      # privileged container is a read as far as the filesystem is concerned. This is
+      # root-equivalent access to the host: see SECURITY.md, known limitations, before
+      # putting anything else on this box.
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Membership of the host group that owns the socket, so core reaches the daemon
+    # without running as root. `stat -c '%g' /var/run/docker.sock` on the host.
+    group_add:
+      - "${CORE_DOCKER_GID:-999}"
+    healthcheck:
+      test: ["CMD", "/app/core", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  web:
+    build:
+      context: ../web
+    image: wingman/web:${WINGMAN_VERSION:-dev}
+    restart: unless-stopped
+    # Started after both, but not gated on either being healthy. The console's job when a
+    # service is down is to say so — a dashboard that will not start until the thing it
+    # monitors is up is a dashboard you cannot use to find out why it is down.
+    depends_on:
+      - goal-engine
+      - core
+    env_file:
+      - .env.web
+    environment:
+      # Service names inside this network, not the loopback addresses in the example file.
+      GOAL_ENGINE_BASE_URL: http://goal-engine:8080
+      CORE_BASE_URL: http://core:8081
+      PORT: "3000"
+      # 0.0.0.0 inside the container. A process bound to loopback in here is unreachable
+      # even from its own published port; the loopback binding that matters is the one
+      # below, on the host side.
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    # No volumes. This console holds nothing: no database, no cache, no uploads, no
+    # config file of its own. Everything it knows arrives in the environment or over
+    # HTTP from the two services, which is why it is the one container here that can be
+    # replaced without a thought.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/signin').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
 volumes:
   goal-db-data:
-
-# ---------------------------------------------------------------------------
-# Wingman core (the Rakazo fork).
-#
-# scripts/fork-core.sh clones your fork into ../core, which brings its own compose
-# file, its own database and its own environment. Run it as its own stack and let
-# the two talk over a shared network:
-#
-#   docker network create wingman-net
-#
-# then add to both stacks:
-#
-#   networks:
-#     default:
-#       name: wingman-net
-#       external: true
-#
-# and point the goal engine at it in deploy/.env:
-#
-#   WINGMAN_CORE_BASE_URL=http://core:3000
-#
-# Keep TRIGGER_DRY_RUN=true until you have watched a week of what the engine wants
-# to do. The audit log fills up either way; only the tasks stop.
-# ---------------------------------------------------------------------------
+  core-db-data:

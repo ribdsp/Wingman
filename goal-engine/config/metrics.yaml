@@ -34,6 +34,20 @@ metrics:
     unit: count
     source: push
 
+  # Core pushes one sample per finished run when GOAL_ENGINE_REPORT_SPEND is on,
+  # which is its default whenever it has a base URL for this service. Declared here
+  # so a fresh stack works: an undeclared key is refused with UNKNOWN_METRIC, which
+  # core logs and carries on from — reporting is not permission — but a log line
+  # every run is a log line nobody reads.
+  #
+  # It is what makes the assistant's own cost something a goal can be written
+  # against: state a target on it and the engine notices when the agent starts
+  # costing more than it saves.
+  - key: ops.tokens_spent
+    description: Tokens core spent, one sample per agent run
+    unit: count
+    source: push
+
 # ---------------------------------------------------------------------------
 # A metric the engine reads for itself, from a database.
 #

@@ -1,0 +1,13 @@
+<!-- The console's mark: the wordmark's two bars, and nothing else.
+
+     Geometry only — no text, because it is rendered at 16px in a tab strip next to twenty
+     others, and at that size a letter is a smudge while a shape is still a shape. The same
+     two bars the rail's wordmark carries, so a pinned tab and the top of the sidebar are
+     recognisably one product. Near-white on the console's own background: this tile is read
+     against a browser chrome nobody controls, and a coloured mark at 16px reads as a smear
+     while a light shape on near-black stays a shape. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#0d0d0e" />
+  <rect x="9.5" y="8" width="5" height="16" rx="2.5" fill="#f1f1ef" />
+  <rect x="17.5" y="8" width="5" height="16" rx="2.5" fill="#f1f1ef" />
+</svg>

@@ -82,6 +82,9 @@ type MonitorDeps struct {
 	// Location renders times in briefs and is the operator's timezone. Defaults
 	// to UTC.
 	Location *time.Location
+	// Notices tells a human that an agent was woken. Optional: nil is the
+	// NOTIFY_ENABLED=false case and the monitor behaves identically without it.
+	Notices *Notices
 	// Clock defaults to time.Now.
 	Clock Clock
 	// BatchSize defaults to defaultBatchSize.
@@ -108,6 +111,7 @@ type Monitor struct {
 	defaultBotID     string
 	defaultChannelID string
 	location         *time.Location
+	notices          *Notices
 	clock            Clock
 	batchSize        int
 	maxSampleAge     time.Duration
@@ -154,6 +158,7 @@ func NewMonitor(deps MonitorDeps) (*Monitor, error) {
 		defaultBotID:     deps.DefaultBotID,
 		defaultChannelID: deps.DefaultChannelID,
 		location:         deps.Location,
+		notices:          deps.Notices,
 		clock:            deps.Clock,
 		batchSize:        deps.BatchSize,
 		maxSampleAge:     deps.MaxSampleAge,
@@ -538,6 +543,11 @@ func (m *Monitor) dispatchTrigger(ctx context.Context, goal domain.Goal, ev doma
 		Str("externalTaskId", response.TaskID).
 		Bool("dryRun", response.DryRun).
 		Msg("agent task dispatched")
+
+	// Last, and after everything durable: an agent is now working unattended and
+	// somebody should hear about it. A failure here is logged and dropped — the
+	// dispatch has happened either way, and the console shows it regardless.
+	m.notices.TriggerDispatched(ctx, goal.ID)
 	return nil
 }
 

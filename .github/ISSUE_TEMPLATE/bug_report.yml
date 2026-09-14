@@ -1,21 +1,29 @@
 name: Bug report
-description: Something in the goal engine behaves differently from what the docs say.
+description: Something in Wingman behaves differently from what the docs say.
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time. Two things before you start:
+        Thanks for taking the time. One thing before you start:
 
         **Security issues do not belong here.** If this is exploitable, see
         [SECURITY.md](https://github.com/ribdsp/wingman/blob/main/SECURITY.md) and
-        report it privately.
+        report it privately. That includes anything where an agent did something it
+        should not have been able to do.
 
-        **Bugs in `core/` belong upstream.** `core/` is a fork of
-        [Rakazo](https://github.com/elie222/rakazo). If the problem is in the agent
-        runtime, the channels, or the sandbox, upstream will fix it for more people
-        than this repo can. Problems with *how Wingman talks to* core — the task
-        route, the shared secret, the trigger payload — are ours.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which part
+      options:
+        - goal engine (goals, metrics, the trigger, the spending gate, audit)
+        - core (the agent loop, tools, sandboxes, accounts, chats)
+        - the console (screens, sign-in, operator authority, the kill-switch strip)
+        - the boundary between them (a trigger that produced no run, or the reverse)
+        - not sure
+    validations:
+      required: true
 
   - type: textarea
     id: what
@@ -44,8 +52,8 @@ body:
       label: Reproduction
       description: >
         Curl calls, a goal definition, a failing test — whatever you have. Anything
-        in `internal/domain` can be reproduced in a unit test with no database at
-        all, and a failing test is the fastest possible report.
+        in either service's `internal/domain` can be reproduced in a unit test with
+        no database at all, and a failing test is the fastest possible report.
       render: shell
     validations:
       required: false
@@ -53,11 +61,15 @@ body:
   - type: textarea
     id: decisions
     attributes:
-      label: What the engine recorded
+      label: What the service recorded
       description: >
-        Relevant output from `GET /v1/goals/:id`, `POST /v1/monitor/tick`, or
-        `GET /v1/audit`. **Redact your keys, DSNs, and anything commercially
-        sensitive** — the audit log carries real business numbers.
+        Relevant output from `GET /v1/goals/:id`, `POST /v1/monitor/tick` or
+        `GET /v1/audit` on the goal engine, or `GET /v1/runs/:id` and
+        `GET /v1/runs/:id/steps` on core. For the console: what the screen said, the
+        `requestId` it showed, and the matching line from its own log — it records
+        nothing else, because it stores nothing. **Redact your keys, DSNs, and anything
+        commercially sensitive** — the audit log carries real business numbers and a
+        run's steps carry whatever the agent read.
       render: json
     validations:
       required: false
@@ -67,8 +79,9 @@ body:
     attributes:
       label: Version
       description: >
-        Tag or commit. The running service reports it in its first log line, and
-        `core/.wingman-core-ref` records which core you provisioned.
+        Tag or commit. Both services log it in their startup line, as
+        `"version":"…"`; a plain `go build` reports `dev`. The console has no version
+        line of its own — give the commit you built it from.
       placeholder: v0.1.0, or 9f3a1c2
     validations:
       required: true
@@ -81,6 +94,8 @@ body:
         - docker compose (deploy/docker-compose.yml)
         - the binary directly
         - go run, from source
+        - the console from its own build (node .next/standalone/server.js)
+        - the console in development (npm run dev)
         - tests only
     validations:
       required: true
@@ -90,9 +105,15 @@ body:
     attributes:
       label: Relevant configuration
       description: >
-        The settings that bear on this — `TRIGGER_DRY_RUN`, `MONITOR_INTERVAL`,
-        `METRIC_MAX_SAMPLE_AGE`, the goal's tolerance and cooldown, the metric's
-        source. **No secrets.**
+        The settings that bear on this. For the goal engine: `TRIGGER_DRY_RUN`,
+        `MONITOR_INTERVAL`, `METRIC_MAX_SAMPLE_AGE`, the goal's tolerance and
+        cooldown, the metric's source. For core: `SANDBOX_BACKEND`, the run limits,
+        `DEFAULT_PROVIDER` and `DEFAULT_MODEL`, and the relevant entry from
+        `config/tools.yaml`. For the console: `WEB_OPERATOR_TTL_MINUTES`,
+        `WEB_POLL_INTERVAL_MS`, `WEB_UPSTREAM_TIMEOUT_MS`, and whether anything
+        terminates TLS in front of it. **No secrets** — `config/tools.yaml` and
+        `mcp.yaml` hold variable names rather than values, so those are safe to paste
+        as they are; `WEB_COOKIE_SECRET` and any key are not.
       render: shell
     validations:
       required: false

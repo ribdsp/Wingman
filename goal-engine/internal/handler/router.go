@@ -106,6 +106,10 @@ func NewRouter(deps RouterDeps) (*gin.Engine, error) {
 		goals.POST("", h.CreateGoal)
 		goals.GET("", h.ListGoals)
 		goals.GET("/:id", h.GetGoal)
+		// The recorded pace history. Read-only, and readable by a bot: it is what
+		// the monitor already decided, and a dashboard that could show a target but
+		// not whether it is being met would be showing the less useful half.
+		goals.GET("/:id/evaluations", h.ListGoalEvaluations)
 		// Operator only. Also enforced in the service: a route check protects a
 		// route, the service check protects the invariant if a second route ever
 		// reaches the same operation.
@@ -132,6 +136,12 @@ func NewRouter(deps RouterDeps) (*gin.Engine, error) {
 	}
 
 	v1.GET("/audit", h.ListAudit)
+
+	// Where everything stands, in one request: the newest evaluation of every goal
+	// that has one. Outside the goals group because it spans them, and separate from
+	// the monitor tick because reading the last verdict must never mean running a
+	// new one.
+	v1.GET("/evaluations/latest", h.LatestEvaluations)
 
 	metricsGroup := v1.Group("/metrics")
 	{
