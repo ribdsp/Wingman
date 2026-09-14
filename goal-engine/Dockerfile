@@ -9,7 +9,7 @@
 #   docker build -t wingman/goal-engine:v0.1.0 --build-arg VERSION=v0.1.0 .
 
 # ---- Build ---------------------------------------------------------------
-FROM golang:1.26-alpine AS build
+FROM golang:1.27-alpine AS build
 
 WORKDIR /src
 
