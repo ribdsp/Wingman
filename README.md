@@ -27,7 +27,7 @@ in production long enough for anyone to make promises about it. Read
 
 You say, once:
 
-> kejar MRR 50 juta sebelum akhir kuartal
+> get MRR to 50M before the quarter ends
 
 That becomes a goal: a metric (`business.mrr`), a target (50,000,000), a deadline,
 and a tolerance for being off pace. Then, on a timer, without you:
@@ -103,10 +103,10 @@ curl -s localhost:8080/v1/goals \
   -d '{
         "product": "acme",
         "title": "MRR to 50M by end of Q4",
-        "sourceText": "kejar MRR 50 juta sebelum akhir kuartal",
+        "sourceText": "get MRR to 50M before the quarter ends",
         "metricKey": "business.mrr",
         "targetValue": 50000000,
-        "periodEnd": "2026-12-31T23:59:59+07:00"
+        "periodEnd": "2026-12-31T23:59:59Z"
       }'
 ```
 

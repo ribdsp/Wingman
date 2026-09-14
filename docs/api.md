@@ -56,7 +56,7 @@ Every response — success or failure — has the same shape.
   "data": {},
   "meta": {
     "requestId": "0d9f7c1e-6c2a-4a1b-9c3f-6e5a2b1d4c88",
-    "timestamp": "2026-09-11T19:00:00+07:00"
+    "timestamp": "2026-09-11T19:00:00Z"
   }
 }
 ```
@@ -205,12 +205,12 @@ falling behind it may wake an agent.
 {
   "product": "acme",
   "title": "MRR to 50M by end of Q4",
-  "sourceText": "kejar MRR 50 juta sebelum akhir kuartal",
+  "sourceText": "get MRR to 50M before the quarter ends",
   "metricKey": "business.mrr",
   "comparator": "gte",
   "targetValue": 50000000,
-  "periodStart": "2026-10-01T00:00:00+07:00",
-  "periodEnd": "2026-12-31T23:59:59+07:00",
+  "periodStart": "2026-10-01T00:00:00Z",
+  "periodEnd": "2026-12-31T23:59:59Z",
   "toleranceRatio": 0.05,
   "triggerCooldownSeconds": 21600,
   "maxTriggersPerPeriod": 5,
@@ -255,7 +255,7 @@ Filters: `product`, `status`, `metricKey`, `search`, plus `page` and `limit`.
 Every field optional; only what you send changes.
 
 ```json
-{ "targetValue": 60000000, "status": "paused", "periodEnd": "2027-01-31T23:59:59+07:00" }
+{ "targetValue": 60000000, "status": "paused", "periodEnd": "2027-01-31T23:59:59Z" }
 ```
 
 Moving the target is an operator's call because the alternative is an agent that
@@ -299,8 +299,8 @@ a real state and an alarming one, and a typo must not look like it.
   "targetMet": false,
   "decision": "trigger",
   "reason": "off pace: observed 4.2e+07 vs expected 5.5e+07 at 50% elapsed (pace 0.71)",
-  "evaluatedAt": "2026-09-11T18:00:00+07:00",
-  "createdAt": "2026-09-11T18:00:00+07:00"
+  "evaluatedAt": "2026-09-11T18:00:00Z",
+  "createdAt": "2026-09-11T18:00:00Z"
 }
 ```
 
@@ -345,7 +345,7 @@ endpoint that reads any database this service can reach.
 Report a value for a `push` metric.
 
 ```json
-{ "value": 47250000, "observedAt": "2026-09-11T18:00:00+07:00", "note": "billing nightly job" }
+{ "value": 47250000, "observedAt": "2026-09-11T18:00:00Z", "note": "billing nightly job" }
 ```
 
 `value` is required and `0` is a real reading — an absent `value` is rejected
@@ -486,7 +486,7 @@ Filters: `actorType`, `action`, `subjectType`, `subjectId`, `page`, `limit`.
 ```json
 {
   "id": 4127,
-  "at": "2026-09-11T18:04:11+07:00",
+  "at": "2026-09-11T18:04:11Z",
   "actorType": "user",
   "actorId": "ops",
   "action": "goal.updated",
@@ -512,7 +512,7 @@ Runs one evaluation pass now instead of waiting for `MONITOR_INTERVAL`.
 
 ```json
 {
-  "startedAt": "2026-09-11T18:00:00+07:00",
+  "startedAt": "2026-09-11T18:00:00Z",
   "durationMs": 412,
   "halted": false,
   "checked": 12,
@@ -678,7 +678,7 @@ history.
 ```json
 {
   "token": "wgm_…",
-  "expiresAt": "2026-09-19T18:00:00+07:00",
+  "expiresAt": "2026-09-19T18:00:00Z",
   "user": { "id": "…", "email": "…", "displayName": "…", "isActive": true, "createdAt": "…" }
 }
 ```
@@ -771,7 +771,7 @@ No body. Not even a platform: the code is good on whichever channel it arrives o
 because what proves the link is the message carrying it.
 
 ```json
-{ "code": "WGM-7B3KD-QMXPZ", "expiresAt": "2026-09-12T18:15:00+07:00" }
+{ "code": "WGM-7B3KD-QMXPZ", "expiresAt": "2026-09-12T18:15:00Z" }
 ```
 
 `201`, and the code exists in that response and nowhere else. Only a SHA-256 hash is

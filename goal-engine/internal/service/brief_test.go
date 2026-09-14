@@ -109,9 +109,9 @@ func TestBuildBriefBoundsAPathologicalGoalText(t *testing.T) {
 func TestBuildBriefRendersTimesInTheOperatorsTimezone(t *testing.T) {
 	// An operator reading "17:00" for something that happened at 12:00 UTC cannot
 	// line the brief up against their own day.
-	jakarta := time.FixedZone("WIB", 7*60*60)
+	plusSeven := time.FixedZone("UTC+7", 7*60*60)
 
-	brief := BuildBrief(testGoal().Goal, briefEvaluation(), jakarta)
+	brief := BuildBrief(testGoal().Goal, briefEvaluation(), plusSeven)
 	if !strings.Contains(brief, "2026-09-11T19:00:00+07:00") {
 		t.Fatalf("expected the local timestamp:\n%s", brief)
 	}

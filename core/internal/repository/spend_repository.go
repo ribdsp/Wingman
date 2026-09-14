@@ -42,7 +42,8 @@ type UserDailyTotal struct {
 type SpendRepository struct {
 	db *sqlx.DB
 	// loc is the timezone the daily cap resets in. A cap that reset at UTC midnight
-	// for an operator in Jakarta would reset in the middle of their working morning.
+	// for an operator seven hours ahead of UTC would reset in the middle of their
+	// working morning.
 	loc *time.Location
 }
 

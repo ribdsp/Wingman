@@ -369,6 +369,21 @@ web/node_modules/ .next/   gitignored
 
 ## Language
 
-The user writes Indonesian; reply in the language they use. Code, identifiers,
-commit messages, API fields and documentation stay English. The private `PRD.md` is
-Indonesian and stays that way; `docs/motivation.md`, being public, is English.
+**Everything in this repository is English.** Not only identifiers and commit messages —
+code comments, test names, *test fixture values*, documentation prose, the shipped YAML
+comments, and the example goals and briefs in `README.md` and `docs/`. Example goal text
+written in the author's own language demonstrated the feature perfectly and made the
+project unreadable to most of the people it is published for; it is gone, and a grep for
+non-English vocabulary should keep returning nothing.
+
+The same rule covers locale defaults, which are a subtler version of the same mistake:
+`TIMEZONE` defaults to `UTC` in both services, because a self-hosted service that
+silently renders every timestamp — and, in core, places every daily token cap boundary —
+in whichever zone the author happened to work in is wrong for everyone else. Test
+fixtures that need a *non-UTC* zone to prove the plumbing works are a different thing and
+stay: their point is the offset, not the place.
+
+Two deliberate exceptions, both about what is *not* published: the private `PRD.md` is
+Indonesian and stays that way, and a conversation with the user is held in whichever
+language they write in. Neither reaches a tracked file. `docs/motivation.md` is the
+public, English equivalent of `PRD.md`.

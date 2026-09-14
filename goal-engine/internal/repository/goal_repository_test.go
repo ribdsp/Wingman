@@ -32,7 +32,7 @@ func goalSQLRows() *sqlmock.Rows {
 func addGoalRow(rows *sqlmock.Rows, baseline any) *sqlmock.Rows {
 	return rows.AddRow(
 		"11111111-1111-1111-1111-111111111111", "acme", "Grow MRR",
-		"naikkan MRR ke 50 juta bulan ini", "billing.mrr.idr", "gte",
+		"get MRR to 50M this month", "billing.mrr.idr", "gte",
 		50000000.0, baseline, testPeriodStart, testPeriodEnd, "active",
 		0.05, 21600, 3, "bot-1", "chan-1", "ops", testPeriodStart, testPeriodStart,
 	)
@@ -42,7 +42,7 @@ func testGoal() domain.Goal {
 	return domain.Goal{
 		Product:              "acme",
 		Title:                "Grow MRR",
-		SourceText:           "naikkan MRR ke 50 juta bulan ini",
+		SourceText:           "get MRR to 50M this month",
 		MetricKey:            "billing.mrr.idr",
 		Comparator:           domain.ComparatorGTE,
 		TargetValue:          50000000,
@@ -62,7 +62,7 @@ func TestGoalRepositoryCreateStoresAndMapsBack(t *testing.T) {
 	db, mock := newTestDB(t)
 	repo := NewGoalRepository(db)
 	mock.ExpectQuery("INSERT INTO goals").
-		WithArgs("acme", "Grow MRR", "naikkan MRR ke 50 juta bulan ini", "billing.mrr.idr",
+		WithArgs("acme", "Grow MRR", "get MRR to 50M this month", "billing.mrr.idr",
 			"gte", 50000000.0, nil, testPeriodStart, testPeriodEnd, "active",
 			0.05, 21600, 3, "bot-1", "chan-1", "ops").
 		WillReturnRows(addGoalRow(goalSQLRows(), nil))
@@ -99,7 +99,7 @@ func TestGoalRepositoryCreateAppliesDefaults(t *testing.T) {
 	goal.ToleranceRatio = 0
 
 	mock.ExpectQuery("INSERT INTO goals").
-		WithArgs("acme", "Grow MRR", "naikkan MRR ke 50 juta bulan ini", "billing.mrr.idr",
+		WithArgs("acme", "Grow MRR", "get MRR to 50M this month", "billing.mrr.idr",
 			"gte", 50000000.0, nil, testPeriodStart, testPeriodEnd, "active",
 			domain.DefaultToleranceRatio, 21600, 3, "bot-1", "chan-1", "ops").
 		WillReturnRows(addGoalRow(goalSQLRows(), nil))
@@ -117,7 +117,7 @@ func TestGoalRepositoryCreatePassesBaselineWhenSet(t *testing.T) {
 	goal.BaselineValue = &baseline
 
 	mock.ExpectQuery("INSERT INTO goals").
-		WithArgs("acme", "Grow MRR", "naikkan MRR ke 50 juta bulan ini", "billing.mrr.idr",
+		WithArgs("acme", "Grow MRR", "get MRR to 50M this month", "billing.mrr.idr",
 			"gte", 50000000.0, 32000000.0, testPeriodStart, testPeriodEnd, "active",
 			0.05, 21600, 3, "bot-1", "chan-1", "ops").
 		WillReturnRows(addGoalRow(goalSQLRows(), 32000000.0))

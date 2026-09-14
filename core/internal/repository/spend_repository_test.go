@@ -269,21 +269,21 @@ func TestSpendRepository_forRun_makesAnExpensiveRunAnswerable(t *testing.T) {
 
 func TestSpendRepository_dayBounds_resetsAtLocalMidnightNotUTCMidnight(t *testing.T) {
 	// Arrange
-	jakarta := mustLoad(t, "Asia/Jakarta")
-	repo := NewSpendRepository(nil, jakarta)
-	// 2026-09-11 20:00 in Jakarta is still 13:00 UTC on the same date, but 02:00
-	// Jakarta would be the previous UTC day — which is where a UTC boundary goes wrong.
-	now := time.Date(2026, 9, 11, 2, 0, 0, 0, jakarta)
+	bangkok := mustLoad(t, "Asia/Bangkok") // UTC+07:00, no DST
+	repo := NewSpendRepository(nil, bangkok)
+	// 2026-09-11 20:00 at UTC+07:00 is still 13:00 UTC on the same date, but 02:00
+	// local is the previous UTC day — which is where a UTC boundary goes wrong.
+	now := time.Date(2026, 9, 11, 2, 0, 0, 0, bangkok)
 
 	// Act
 	start, end := repo.DayBounds(now)
 
 	// Assert
-	// A cap that reset at UTC midnight would, for an operator in Jakarta, reset at 7am
+	// A cap that reset at UTC midnight would, seven hours ahead of UTC, reset at 7am
 	// local — in the middle of their working morning, halfway through the day it was
 	// meant to bound.
-	if start.Day() != 11 || start.Hour() != 0 || start.Location() != jakarta {
-		t.Errorf("start = %s; want local midnight on the 11th in Jakarta", start)
+	if start.Day() != 11 || start.Hour() != 0 || start.Location() != bangkok {
+		t.Errorf("start = %s; want local midnight on the 11th", start)
 	}
 	if end.Day() != 12 || end.Hour() != 0 {
 		t.Errorf("end = %s; want local midnight on the 12th", end)

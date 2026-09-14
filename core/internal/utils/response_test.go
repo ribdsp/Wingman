@@ -223,10 +223,10 @@ func TestNowISO_usesTheConfiguredZone(t *testing.T) {
 	// Arrange
 	// Restore the package default so test order does not matter.
 	t.Cleanup(func() { SetLocation(time.UTC) })
-	jakarta := time.FixedZone("WIB", 7*60*60)
+	plusSeven := time.FixedZone("UTC+7", 7*60*60)
 
 	// Act
-	SetLocation(jakarta)
+	SetLocation(plusSeven)
 	got := NowISO()
 
 	// Assert
@@ -242,8 +242,8 @@ func TestNowISO_usesTheConfiguredZone(t *testing.T) {
 func TestSetLocation_ignoresNil(t *testing.T) {
 	// Arrange
 	t.Cleanup(func() { SetLocation(time.UTC) })
-	jakarta := time.FixedZone("WIB", 7*60*60)
-	SetLocation(jakarta)
+	plusSeven := time.FixedZone("UTC+7", 7*60*60)
+	SetLocation(plusSeven)
 
 	// Act
 	SetLocation(nil)

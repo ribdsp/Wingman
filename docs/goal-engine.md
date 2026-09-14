@@ -19,7 +19,7 @@ without asking. This document is the model; [api.md](api.md) is the interface.
 ```
 product      acme
 title        MRR to 50M by end of Q4
-sourceText   kejar MRR 50 juta sebelum akhir kuartal
+sourceText   get MRR to 50M before the quarter ends
 metricKey    business.mrr          ← must be declared in config/metrics.yaml
 comparator   gte                   ← reach it (gte) or stay under it (lte)
 targetValue  50000000
@@ -32,7 +32,7 @@ botId        growth                ← who gets woken
 ```
 
 `sourceText` is kept verbatim because it is what the agent is shown. A brief that
-says *"kejar MRR 50 juta sebelum akhir kuartal — currently 12% behind pace"* is a
+says *"get MRR to 50M before the quarter ends — currently 12% behind pace"* is a
 better instruction than one reconstructed from four numeric fields.
 
 `baselineValue` matters more than it looks. Without it, "get MRR to 50M" is
@@ -252,7 +252,7 @@ produced it. That last field is what turns one line in a log into one row in the
 audit trail.
 
 ```
-2026-09-11T18:04:11+07:00  user ops  goal.updated  goal 0f8c…  ok
+2026-09-11T18:04:11Z  user ops  goal.updated  goal 0f8c…  ok
     {"targetValue": {"from": 50000000, "to": 60000000}}  req 0d9f…
 ```
 

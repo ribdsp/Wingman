@@ -82,7 +82,7 @@ Idempotency-Key: goal:0f8c…:2026-09-11T18:00:00Z
 {
   "botId": "growth",
   "channelId": "C0123",
-  "brief": "MRR is 12% behind the pace needed for \"kejar MRR 50 juta sebelum akhir kuartal\" …",
+  "brief": "MRR is 12% behind the pace needed for \"get MRR to 50M before the quarter ends\" …",
   "idempotencyKey": "goal:0f8c…:2026-09-11T18:00:00Z",
   "metadata": { "goalId": "0f8c…", "metricKey": "business.mrr", "product": "acme" }
 }

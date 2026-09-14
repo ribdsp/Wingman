@@ -502,9 +502,9 @@ curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/v1/goals    # 401
 curl -s localhost:8080/v1/goals -H "Authorization: Bearer $OP" \
   -H 'Content-Type: application/json' \
   -d '{"product":"acme","title":"MRR to 50M by end of Q4",
-       "sourceText":"kejar MRR 50 juta sebelum akhir kuartal",
+       "sourceText":"get MRR to 50M before the quarter ends",
        "metricKey":"business.mrr","targetValue":50000000,
-       "periodEnd":"2026-12-31T23:59:59+07:00"}'
+       "periodEnd":"2026-12-31T23:59:59Z"}'
 
 # Report a value well behind pace.
 curl -s localhost:8080/v1/metrics/business.mrr/samples -H "Authorization: Bearer $OP" \

@@ -26,8 +26,12 @@ const (
 	defaultAppEnv = "development"
 	// defaultLogLevel is info. Debug is never the default because the debug path
 	// logs request bodies, and a request body here can contain a user's brief.
-	defaultLogLevel      = "info"
-	defaultTimezone      = "Asia/Jakarta"
+	defaultLogLevel = "info"
+	// defaultTimezone is UTC because this service is self-hosted anywhere and an unset
+	// TIMEZONE must not silently render every timestamp — and place every daily token
+	// cap boundary — in whichever zone the author happened to work in. An operator who
+	// wants local time sets the variable.
+	defaultTimezone      = "UTC"
 	defaultShutdownGrace = 30 * time.Second
 	defaultMigrationsDir = "migrations"
 

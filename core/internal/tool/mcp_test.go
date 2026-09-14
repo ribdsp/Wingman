@@ -362,7 +362,7 @@ func TestMCP_childEnv_handsAServerNothingItWasNotGiven(t *testing.T) {
 	environment := map[string]string{
 		"PATH":                 "/usr/bin",
 		"HOME":                 "/home/wingman",
-		"TZ":                   "Asia/Jakarta",
+		"TZ":                   "Etc/UTC",
 		"REPORTS_TOKEN":        "granted-on-purpose",
 		"ANTHROPIC_API_KEY":    "sk-ant-leaked",
 		"OPENAI_API_KEY":       "sk-oai-leaked",
@@ -386,7 +386,7 @@ func TestMCP_childEnv_handsAServerNothingItWasNotGiven(t *testing.T) {
 
 	// Assert
 	joined := strings.Join(env, "\n")
-	for _, want := range []string{"PATH=/usr/bin", "HOME=/home/wingman", "TZ=Asia/Jakarta", "REPORTS_TOKEN=granted-on-purpose"} {
+	for _, want := range []string{"PATH=/usr/bin", "HOME=/home/wingman", "TZ=Etc/UTC", "REPORTS_TOKEN=granted-on-purpose"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("the child was not given %q, so it may not start at all:\n%s", want, joined)
 		}

@@ -934,14 +934,14 @@ func TestRequestDecidesIdenticallyWithNotificationsTurnedOff(t *testing.T) {
 
 func TestStartOfDayResetsWithTheOperatorsDayNotUTCs(t *testing.T) {
 	// A cap called "daily" that rolls over at 07:00 local is not a daily cap.
-	jakarta := time.FixedZone("WIB", 7*60*60)
-	local := time.Date(2026, 9, 11, 2, 30, 0, 0, jakarta)
+	plusSeven := time.FixedZone("UTC+7", 7*60*60)
+	local := time.Date(2026, 9, 11, 2, 30, 0, 0, plusSeven)
 
 	got := startOfDay(local)
-	if got.Hour() != 0 || got.Day() != 11 || got.Location() != jakarta {
+	if got.Hour() != 0 || got.Day() != 11 || got.Location() != plusSeven {
 		t.Fatalf("expected local midnight on the 11th, got %v", got)
 	}
-	// 02:30 WIB is still the 10th in UTC, which is exactly the day a UTC-based
+	// 02:30 at UTC+7 is still the 10th in UTC, which is exactly the day a UTC-based
 	// truncation would have charged the spend to.
 	if got.UTC().Day() != 10 {
 		t.Fatalf("expected the fixture to straddle the UTC date boundary, got %v", got.UTC())

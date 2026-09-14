@@ -29,10 +29,10 @@ import (
 
 	"github.com/rs/zerolog"
 
-	// The zone database is compiled in so TIMEZONE=Asia/Jakarta resolves inside a
-	// scratch container, which carries no /usr/share/zoneinfo. Without it the service
+	// The zone database is compiled in so any TIMEZONE an operator sets resolves inside
+	// a scratch container, which carries no /usr/share/zoneinfo. Without it the service
 	// would fall back to UTC and every rendered timestamp — and every daily token cap
-	// boundary — would be wrong by seven hours.
+	// boundary — would be wrong by that zone's offset.
 	_ "time/tzdata"
 
 	"github.com/ribdsp/wingman/core/internal/agent"

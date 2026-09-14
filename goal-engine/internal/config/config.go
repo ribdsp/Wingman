@@ -21,10 +21,13 @@ import (
 
 // Defaults applied when the corresponding environment variable is unset.
 const (
-	defaultPort               = 8080
-	defaultAppEnv             = "development"
-	defaultLogLevel           = "info"
-	defaultTimezone           = "Asia/Jakarta"
+	defaultPort     = 8080
+	defaultAppEnv   = "development"
+	defaultLogLevel = "info"
+	// defaultTimezone is UTC because this service is self-hosted anywhere and an
+	// unset TIMEZONE must not silently render every timestamp in whichever zone the
+	// author happened to work in. An operator who wants local time sets the variable.
+	defaultTimezone           = "UTC"
 	defaultMonitorInterval    = time.Hour
 	defaultCoreTimeout        = 30 * time.Second
 	defaultSampleTimeout      = 15 * time.Second

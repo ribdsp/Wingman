@@ -176,12 +176,12 @@ func TestSetLocationChangesRenderedTimezone(t *testing.T) {
 	original := location
 	defer func() { location = original }()
 
-	jakarta, err := time.LoadLocation("Asia/Jakarta")
-	if err != nil {
-		t.Skipf("timezone database unavailable: %v", err)
-	}
+	// A fixed offset rather than a named zone: what is under test is that NowISO
+	// renders in whatever location it was given, and a fixed zone needs no tzdata,
+	// so this can never degrade into a skip that hides a regression.
+	plusSeven := time.FixedZone("UTC+7", 7*60*60)
 
-	SetLocation(jakarta)
+	SetLocation(plusSeven)
 	if got := NowISO(); !hasOffset(got, "+07:00") {
 		t.Fatalf("expected a +07:00 offset, got %q", got)
 	}

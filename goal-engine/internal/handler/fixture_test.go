@@ -289,7 +289,7 @@ func validGoalBody() string {
 	return `{
 		"product": "acme",
 		"title": "Reach 100M MRR",
-		"sourceText": "we need 100 juta MRR by the end of the quarter",
+		"sourceText": "we need 100M MRR by the end of the quarter",
 		"metricKey": "acme.mrr",
 		"comparator": "gte",
 		"targetValue": 100000000,
