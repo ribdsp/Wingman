@@ -66,7 +66,13 @@ func TestRequestIDRefusesAnIDThatIsAnAttack(t *testing.T) {
 			if _, err := uuid.Parse(got); err != nil {
 				t.Fatalf("expected a generated uuid, got %q", got)
 			}
-			if strings.Contains(got, "abc") {
+			// Replaced, not sanitised in place. Compared whole rather than by
+			// substring: every id above fails uuid.Parse, so the line before this one
+			// already proves none of them survived — and a substring check against a
+			// random hex uuid is a test that fails roughly once in a few hundred runs
+			// when the generator happens to emit those characters. CI found exactly
+			// that, on "abc" against a851b6ca-…-699a3abc0ca0.
+			if got == c.id {
 				t.Fatalf("the caller's id survived: %q", got)
 			}
 		})
