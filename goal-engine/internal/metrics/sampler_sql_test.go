@@ -15,7 +15,7 @@ const sampleQuery = "SELECT coalesce(sum(amount), 0)::double precision FROM invo
 
 func sqlDef() Definition {
 	return Definition{
-		Key:        "billing.mrr.idr",
+		Key:        "billing.mrr.usd",
 		Source:     SourceSQL,
 		Datasource: "billing",
 		Query:      sampleQuery,
@@ -58,7 +58,7 @@ func TestSQLSamplerReadsScalarInReadOnlyTransaction(t *testing.T) {
 	if sample.Value != 12500000.0 {
 		t.Fatalf("expected 12500000, got %v", sample.Value)
 	}
-	if sample.MetricKey != "billing.mrr.idr" || sample.Source != SourceSQL {
+	if sample.MetricKey != "billing.mrr.usd" || sample.Source != SourceSQL {
 		t.Fatalf("unexpected sample metadata: %+v", sample)
 	}
 	if sample.Note != "datasource=billing" {
@@ -152,7 +152,7 @@ func TestSQLSamplerPropagatesQueryFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected the query failure to surface")
 	}
-	if !strings.Contains(err.Error(), "billing.mrr.idr") {
+	if !strings.Contains(err.Error(), "billing.mrr.usd") {
 		t.Fatalf("expected the error to name the metric, got: %v", err)
 	}
 }

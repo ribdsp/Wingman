@@ -321,7 +321,7 @@ func TestSpendGate_tellsTheGateWhichRunAndWhichTool_andNothingElse(t *testing.T)
 	decision, err := spendGate{engine: engine}.Request(context.Background(), agent.SpendRequest{
 		ActionType:     "ads_topup",
 		Amount:         250,
-		Currency:       "IDR",
+		Currency:       "USD",
 		RunID:          "run-7",
 		ToolName:       "mcp__ads__topup",
 		IdempotencyKey: "run-7:step-3",

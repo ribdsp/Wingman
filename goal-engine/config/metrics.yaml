@@ -21,7 +21,7 @@
 metrics:
   - key: business.mrr
     description: Monthly recurring revenue, as reported by billing
-    unit: IDR
+    unit: USD
     source: push
 
   - key: business.signups
@@ -66,7 +66,7 @@ metrics:
 # metrics:
 #   - key: billing.mrr
 #     description: Monthly recurring revenue
-#     unit: IDR
+#     unit: USD
 #     source: sql
 #     datasource: billing
 #     query: |

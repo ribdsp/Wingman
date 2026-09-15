@@ -20,7 +20,7 @@ const testAction = "ads.budget.set"
 func testPolicy() domain.ApprovalPolicy {
 	return domain.ApprovalPolicy{
 		ActionType:       testAction,
-		Currency:         "IDR",
+		Currency:         "USD",
 		AutoApproveBelow: 100_000,
 		HardCap:          5_000_000,
 		DailyCap:         1_000_000,
@@ -75,7 +75,7 @@ func spendReq(amount float64) SpendRequest {
 	return SpendRequest{
 		ActionType:  testAction,
 		Amount:      amount,
-		Currency:    "IDR",
+		Currency:    "USD",
 		RequestedBy: "bot-1",
 		Payload:     `{"campaign":"launch"}`,
 	}
@@ -274,10 +274,10 @@ func TestRequestDeniesADisabledActionType(t *testing.T) {
 }
 
 func TestRequestDeniesACurrencyThePolicyDoesNotCover(t *testing.T) {
-	// A policy denominated in IDR says nothing about 5,000 USD.
+	// A policy denominated in USD says nothing about 5,000 EUR.
 	f := newApprovalsFixture(t, testPolicy())
 	req := spendReq(5_000)
-	req.Currency = "USD"
+	req.Currency = "EUR"
 
 	record, err := f.gate.Request(context.Background(), req)
 	if err != nil {
@@ -291,13 +291,13 @@ func TestRequestDeniesACurrencyThePolicyDoesNotCover(t *testing.T) {
 func TestRequestNormalisesTheCurrencyBeforeDeciding(t *testing.T) {
 	f := newApprovalsFixture(t, testPolicy())
 	req := spendReq(50_000)
-	req.Currency = " idr "
+	req.Currency = " usd "
 
 	record, err := f.gate.Request(context.Background(), req)
 	if err != nil {
 		t.Fatalf("expected a decision, got %v", err)
 	}
-	if record.Currency != "IDR" {
+	if record.Currency != "USD" {
 		t.Fatalf("expected a normalised currency, got %q", record.Currency)
 	}
 	if record.Outcome != domain.ApprovalAutoApproved {
@@ -308,10 +308,10 @@ func TestRequestNormalisesTheCurrencyBeforeDeciding(t *testing.T) {
 func TestRequestRejectsAnUndecidableRequest(t *testing.T) {
 	f := newApprovalsFixture(t, testPolicy())
 	cases := map[string]SpendRequest{
-		"no action type": {Amount: 1, Currency: "IDR", RequestedBy: "bot-1"},
+		"no action type": {Amount: 1, Currency: "USD", RequestedBy: "bot-1"},
 		"no currency":    {ActionType: testAction, Amount: 1, RequestedBy: "bot-1"},
-		"no requester":   {ActionType: testAction, Amount: 1, Currency: "IDR"},
-		"blank action":   {ActionType: "   ", Amount: 1, Currency: "IDR", RequestedBy: "bot-1"},
+		"no requester":   {ActionType: testAction, Amount: 1, Currency: "USD"},
+		"blank action":   {ActionType: "   ", Amount: 1, Currency: "USD", RequestedBy: "bot-1"},
 	}
 	for name, req := range cases {
 		_, err := f.gate.Request(context.Background(), req)
@@ -878,7 +878,7 @@ func TestRequestNotificationCarriesNoAmountOrCurrency(t *testing.T) {
 			t.Fatalf("expected no figure in a headline, got %q", headline)
 		}
 	}
-	if strings.Contains(headline, "IDR") {
+	if strings.Contains(headline, "USD") {
 		t.Fatalf("expected no currency in a headline, got %q", headline)
 	}
 }

@@ -292,7 +292,7 @@ func testGrants() *tool.Grants {
 			Spend: &domain.ToolSpend{
 				ActionType:     "supplier.invoice",
 				AmountArgument: "amount",
-				Currency:       "IDR",
+				Currency:       "USD",
 			},
 		},
 		domain.ToolGrant{Name: "delete_everything", Class: domain.ToolClassWrite, Enabled: false},

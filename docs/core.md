@@ -691,7 +691,7 @@ brief. Limits are the defaults; the operator has granted three tools.
 | | | `read` → allowed, runs in the sandbox | |
 | 2 | continue — iteration 2 of 15 | asks for `post_update` | model step, then a tool step with the refusal |
 | | | `write`, **unattended** → refused for this run; the model is told why | |
-| 3 | continue — iteration 3 of 15 | asks for `pay_invoice`, 250 000 IDR | model step, then a tool step |
+| 3 | continue — iteration 3 of 15 | asks for `pay_invoice`, 250 USD | model step, then a tool step |
 | | | `spend` → filed with the goal engine, which answers `pending` | |
 | | | the model is told a human was asked; the run carries on | |
 | 4 | continue — iteration 4 of 15 | answers with a summary and no tool call | model step |

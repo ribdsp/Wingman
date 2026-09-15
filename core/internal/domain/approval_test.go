@@ -7,7 +7,7 @@ import (
 
 func TestDecideAfterGate_autoApproved_runsTheTool(t *testing.T) {
 	// Arrange, Act
-	got := DecideAfterGate(ApprovalAutoApproved, "amount 12.00 is below the auto-approve threshold of 50.00 IDR")
+	got := DecideAfterGate(ApprovalAutoApproved, "amount 12.00 is below the auto-approve threshold of 50.00 USD")
 
 	// Assert
 	if got.Action != GateProceed {
@@ -40,7 +40,7 @@ func TestDecideAfterGate_pending_tellsTheModelAndDoesNotWait(t *testing.T) {
 
 func TestDecideAfterGate_denied_stopsTheRun(t *testing.T) {
 	// Arrange, Act
-	got := DecideAfterGate(ApprovalDenied, "amount 900.00 exceeds the hard cap of 500.00 IDR")
+	got := DecideAfterGate(ApprovalDenied, "amount 900.00 exceeds the hard cap of 500.00 USD")
 
 	// Assert
 	if got.Action != GateStop {

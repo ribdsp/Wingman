@@ -92,7 +92,7 @@ func TestNotices_carryNoAmountCurrencyOrPace(t *testing.T) {
 
 	for _, sent := range notifier.sent {
 		text := sent.Headline
-		for _, forbidden := range []string{"IDR", "USD", "%", "amount", "pace ratio"} {
+		for _, forbidden := range []string{"USD", "EUR", "%", "amount", "pace ratio"} {
 			if strings.Contains(text, forbidden) {
 				t.Fatalf("expected %q to stay out of a notification, got %q", forbidden, text)
 			}

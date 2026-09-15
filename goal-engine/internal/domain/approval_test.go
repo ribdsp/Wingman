@@ -5,7 +5,7 @@ import "testing"
 func adsPolicy() ApprovalPolicy {
 	return ApprovalPolicy{
 		ActionType:       "ads.budget.set",
-		Currency:         "IDR",
+		Currency:         "USD",
 		AutoApproveBelow: 500_000,
 		HardCap:          50_000_000,
 		DailyCap:         10_000_000,
@@ -16,7 +16,7 @@ func adsPolicy() ApprovalPolicy {
 func TestDecideApprovalAutoApprovesAmountBelowThreshold(t *testing.T) {
 	// Arrange
 	p := adsPolicy()
-	req := ApprovalRequest{ActionType: p.ActionType, Amount: 250_000, Currency: "IDR", Policy: &p}
+	req := ApprovalRequest{ActionType: p.ActionType, Amount: 250_000, Currency: "USD", Policy: &p}
 
 	// Act
 	got := DecideApproval(req)
@@ -33,7 +33,7 @@ func TestDecideApprovalAutoApprovesAmountBelowThreshold(t *testing.T) {
 func TestDecideApprovalRequiresHumanAtExactThreshold(t *testing.T) {
 	// Arrange: AutoApproveBelow is an exclusive ceiling.
 	p := adsPolicy()
-	req := ApprovalRequest{ActionType: p.ActionType, Amount: 500_000, Currency: "IDR", Policy: &p}
+	req := ApprovalRequest{ActionType: p.ActionType, Amount: 500_000, Currency: "USD", Policy: &p}
 
 	// Act
 	got := DecideApproval(req)
@@ -50,7 +50,7 @@ func TestDecideApprovalRequiresHumanAtExactThreshold(t *testing.T) {
 func TestDecideApprovalRequiresHumanAboveThreshold(t *testing.T) {
 	// Arrange
 	p := adsPolicy()
-	req := ApprovalRequest{ActionType: p.ActionType, Amount: 2_000_000, Currency: "IDR", Policy: &p}
+	req := ApprovalRequest{ActionType: p.ActionType, Amount: 2_000_000, Currency: "USD", Policy: &p}
 
 	// Act
 	got := DecideApproval(req)
@@ -63,7 +63,7 @@ func TestDecideApprovalRequiresHumanAboveThreshold(t *testing.T) {
 
 func TestDecideApprovalDeniesRequestWithoutAPolicy(t *testing.T) {
 	// Arrange: an unknown action type must never auto-execute.
-	req := ApprovalRequest{ActionType: "ads.campaign.launch", Amount: 1_000, Currency: "IDR", Policy: nil}
+	req := ApprovalRequest{ActionType: "ads.campaign.launch", Amount: 1_000, Currency: "USD", Policy: nil}
 
 	// Act
 	got := DecideApproval(req)
@@ -78,7 +78,7 @@ func TestDecideApprovalDeniesDisabledActionType(t *testing.T) {
 	// Arrange
 	p := adsPolicy()
 	p.Enabled = false
-	req := ApprovalRequest{ActionType: p.ActionType, Amount: 1_000, Currency: "IDR", Policy: &p}
+	req := ApprovalRequest{ActionType: p.ActionType, Amount: 1_000, Currency: "USD", Policy: &p}
 
 	// Act
 	got := DecideApproval(req)
@@ -92,7 +92,7 @@ func TestDecideApprovalDeniesDisabledActionType(t *testing.T) {
 func TestDecideApprovalDeniesAmountAboveHardCap(t *testing.T) {
 	// Arrange
 	p := adsPolicy()
-	req := ApprovalRequest{ActionType: p.ActionType, Amount: 60_000_000, Currency: "IDR", Policy: &p}
+	req := ApprovalRequest{ActionType: p.ActionType, Amount: 60_000_000, Currency: "USD", Policy: &p}
 
 	// Act
 	got := DecideApproval(req)
@@ -109,7 +109,7 @@ func TestDecideApprovalDeniesWhenDailyCapWouldBeExceeded(t *testing.T) {
 	req := ApprovalRequest{
 		ActionType: p.ActionType,
 		Amount:     400_000,
-		Currency:   "IDR",
+		Currency:   "USD",
 		SpentToday: 9_800_000,
 		Policy:     &p,
 	}
@@ -129,7 +129,7 @@ func TestDecideApprovalAllowsSpendThatExactlyMeetsDailyCap(t *testing.T) {
 	req := ApprovalRequest{
 		ActionType: p.ActionType,
 		Amount:     200_000,
-		Currency:   "IDR",
+		Currency:   "USD",
 		SpentToday: 9_800_000,
 		Policy:     &p,
 	}
@@ -149,7 +149,7 @@ func TestDecideApprovalDeniesEverythingWhileKillSwitchIsEngaged(t *testing.T) {
 	req := ApprovalRequest{
 		ActionType:        p.ActionType,
 		Amount:            1,
-		Currency:          "IDR",
+		Currency:          "USD",
 		Policy:            &p,
 		KillSwitchEngaged: true,
 	}
@@ -164,9 +164,9 @@ func TestDecideApprovalDeniesEverythingWhileKillSwitchIsEngaged(t *testing.T) {
 }
 
 func TestDecideApprovalDeniesCurrencyMismatch(t *testing.T) {
-	// Arrange: a policy denominated in IDR must not clear a USD request.
+	// Arrange: a policy denominated in USD must not clear a request in another currency.
 	p := adsPolicy()
-	req := ApprovalRequest{ActionType: p.ActionType, Amount: 10, Currency: "USD", Policy: &p}
+	req := ApprovalRequest{ActionType: p.ActionType, Amount: 10, Currency: "EUR", Policy: &p}
 
 	// Act
 	got := DecideApproval(req)
@@ -181,7 +181,7 @@ func TestDecideApprovalDeniesNonPositiveOrInvalidAmounts(t *testing.T) {
 	// Arrange
 	p := adsPolicy()
 	for _, amount := range []float64{0, -1} {
-		req := ApprovalRequest{ActionType: p.ActionType, Amount: amount, Currency: "IDR", Policy: &p}
+		req := ApprovalRequest{ActionType: p.ActionType, Amount: amount, Currency: "USD", Policy: &p}
 
 		// Act
 		got := DecideApproval(req)
@@ -197,10 +197,10 @@ func TestDecideApprovalAlwaysExplainsItself(t *testing.T) {
 	// Arrange
 	p := adsPolicy()
 	requests := []ApprovalRequest{
-		{ActionType: p.ActionType, Amount: 1_000, Currency: "IDR", Policy: &p},
-		{ActionType: p.ActionType, Amount: 9_000_000, Currency: "IDR", Policy: &p},
-		{ActionType: p.ActionType, Amount: 99_000_000, Currency: "IDR", Policy: &p},
-		{ActionType: "unknown", Amount: 1, Currency: "IDR"},
+		{ActionType: p.ActionType, Amount: 1_000, Currency: "USD", Policy: &p},
+		{ActionType: p.ActionType, Amount: 9_000_000, Currency: "USD", Policy: &p},
+		{ActionType: p.ActionType, Amount: 99_000_000, Currency: "USD", Policy: &p},
+		{ActionType: "unknown", Amount: 1, Currency: "USD"},
 	}
 
 	for _, req := range requests {

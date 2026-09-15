@@ -278,7 +278,7 @@ type fakeMetrics struct {
 func newFakeMetrics(keys ...string) *fakeMetrics {
 	defs := map[string]metrics.Definition{}
 	for _, key := range keys {
-		defs[key] = metrics.Definition{Key: key, Source: metrics.SourceSQL, Unit: "IDR"}
+		defs[key] = metrics.Definition{Key: key, Source: metrics.SourceSQL, Unit: "USD"}
 	}
 	return &fakeMetrics{defs: defs}
 }
@@ -292,7 +292,7 @@ func (f *fakeMetrics) Get(key string) (metrics.Definition, bool) {
 // difference between a number the engine reads for itself and one it waits to be
 // told, so a push test starts here.
 func (f *fakeMetrics) declare(key string, source metrics.SourceType) {
-	f.defs[key] = metrics.Definition{Key: key, Source: source, Unit: "IDR"}
+	f.defs[key] = metrics.Definition{Key: key, Source: source, Unit: "USD"}
 }
 
 // --- sampler ---

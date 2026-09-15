@@ -223,7 +223,7 @@ func TestABotCannotFileASpendUnderAnotherName(t *testing.T) {
 	// could use it would have found a way around the ledger.
 	f := newFixture(t)
 
-	body := `{"actionType":"ads.spend","amount":50000,"currency":"IDR","requestedBy":"someone-else"}`
+	body := `{"actionType":"ads.spend","amount":50000,"currency":"USD","requestedBy":"someone-else"}`
 	env := decode(t, f.asBot(t, http.MethodPost, "/v1/approvals", body), http.StatusCreated)
 	var approval approvalView
 	dataInto(t, env, &approval)
@@ -237,7 +237,7 @@ func TestABotCannotFileASpendUnderAnotherName(t *testing.T) {
 	// The operator may, because they are already trusted with the decision they are
 	// recording.
 	env = decode(t, f.asOperator(t, http.MethodPost, "/v1/approvals",
-		`{"actionType":"ads.spend","amount":50000,"currency":"IDR","requestedBy":"bot-growth"}`), http.StatusCreated)
+		`{"actionType":"ads.spend","amount":50000,"currency":"USD","requestedBy":"bot-growth"}`), http.StatusCreated)
 	dataInto(t, env, &approval)
 	if approval.RequestedBy != "bot-growth" {
 		t.Fatalf("expected the operator's named requester to be honoured, got %q", approval.RequestedBy)
@@ -250,7 +250,7 @@ func TestADeniedSpendIsStillARecordedRequest(t *testing.T) {
 	// that policy refuses is a loop nobody wants.
 	f := newFixture(t)
 
-	body := `{"actionType":"ads.spend","amount":9000000,"currency":"IDR"}`
+	body := `{"actionType":"ads.spend","amount":9000000,"currency":"USD"}`
 	env := decode(t, f.asBot(t, http.MethodPost, "/v1/approvals", body), http.StatusCreated)
 	var approval approvalView
 	dataInto(t, env, &approval)
@@ -273,7 +273,7 @@ func TestAnUnknownActionTypeWaitsForAHumanRatherThanProceeding(t *testing.T) {
 	// for is exactly the case where nobody has decided yet, so nobody has approved.
 	f := newFixture(t)
 
-	body := `{"actionType":"ads.something.new","amount":1,"currency":"IDR"}`
+	body := `{"actionType":"ads.something.new","amount":1,"currency":"USD"}`
 	env := decode(t, f.asBot(t, http.MethodPost, "/v1/approvals", body), http.StatusCreated)
 	var approval approvalView
 	dataInto(t, env, &approval)

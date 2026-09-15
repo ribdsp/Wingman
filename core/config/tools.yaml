@@ -83,7 +83,7 @@ tools: []
 #       # Which of this tool's own arguments carries the amount. The model fills it in;
 #       # the gate's caps are what decide.
 #       amountArgument: amount
-#       currency: IDR
+#       currency: USD
 #
 #   - name: send_invoice_email
 #     description: Email an invoice to a customer

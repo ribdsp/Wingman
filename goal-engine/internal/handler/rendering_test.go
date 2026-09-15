@@ -59,7 +59,7 @@ func TestMetricListIsOrderedAndComplete(t *testing.T) {
 	if views[0].Source != "push" || views[1].Source != "http" {
 		t.Fatalf("expected the declared sources to survive rendering, got %+v", views)
 	}
-	if views[0].Unit != "IDR" {
+	if views[0].Unit != "USD" {
 		t.Fatalf("expected the unit to be published, got %q", views[0].Unit)
 	}
 }

@@ -22,12 +22,12 @@ const validConfig = `
 policies:
   - actionType: ads.topup
     description: Top up an ad account
-    currency: idr
+    currency: usd
     autoApproveBelow: 100000
     hardCap: 5000000
     dailyCap: 2000000
   - actionType: vendor.payment
-    currency: IDR
+    currency: USD
     autoApproveBelow: 0
     hardCap: 10000000
     dailyCap: 10000000
@@ -53,7 +53,7 @@ func TestLoadReadsAndNormalisesPolicies(t *testing.T) {
 	if !ok {
 		t.Fatal("expected ads.topup to be declared")
 	}
-	if topup.Currency != "IDR" {
+	if topup.Currency != "USD" {
 		t.Fatalf("expected the currency to be upper-cased, got %q", topup.Currency)
 	}
 	if !topup.Enabled {
@@ -123,7 +123,7 @@ func TestLoadRejectsACapBelowTheAutoApproveLine(t *testing.T) {
 	path := writeConfig(t, `
 policies:
   - actionType: ads.topup
-    currency: IDR
+    currency: USD
     autoApproveBelow: 9000000
     hardCap: 5000000
     dailyCap: 2000000
@@ -144,11 +144,11 @@ func TestLoadReportsEveryProblemAtOnce(t *testing.T) {
 	path := writeConfig(t, `
 policies:
   - actionType: ""
-    currency: IDR
+    currency: USD
     hardCap: 1
     dailyCap: 1
   - actionType: Ads.Topup
-    currency: rupiah
+    currency: dollars
     hardCap: 0
     dailyCap: -5
 `)
@@ -176,11 +176,11 @@ func TestLoadRejectsDuplicateActionTypes(t *testing.T) {
 	path := writeConfig(t, `
 policies:
   - actionType: ads.topup
-    currency: IDR
+    currency: USD
     hardCap: 100
     dailyCap: 100
   - actionType: ads.topup
-    currency: IDR
+    currency: USD
     hardCap: 999999
     dailyCap: 999999
 `)
@@ -197,7 +197,7 @@ func TestLoadRejectsUnknownFields(t *testing.T) {
 	path := writeConfig(t, `
 policies:
   - actionType: ads.topup
-    currency: IDR
+    currency: USD
     hardCap: 100
     dailyCap: 100
     dailyCapp: 5
@@ -265,7 +265,7 @@ func TestLoadTrimsSurroundingWhitespace(t *testing.T) {
 	registry, err := Load(writeConfig(t, `
 policies:
   - actionType: "  ads.topup  "
-    currency: "  idr  "
+    currency: "  usd  "
     hardCap: 100
     dailyCap: 100
 `))

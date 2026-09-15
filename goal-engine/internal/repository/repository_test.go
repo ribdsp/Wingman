@@ -141,12 +141,12 @@ func TestRequireFiniteRejectsBrokenNumbers(t *testing.T) {
 }
 
 func TestRequireFiniteNamesTheOffendingValue(t *testing.T) {
-	err := requireFinite("metric billing.mrr.idr", math.NaN())
+	err := requireFinite("metric billing.mrr.usd", math.NaN())
 
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	if !contains(err.Error(), "billing.mrr.idr") {
+	if !contains(err.Error(), "billing.mrr.usd") {
 		t.Fatalf("expected the label in the error, got %v", err)
 	}
 }

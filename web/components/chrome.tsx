@@ -197,7 +197,7 @@ export function Id({ children }: { children: ReactNode }) {
 /**
  * `pr-4 last:pr-0` is load-bearing, not spacing taste. These tables are dense and mostly
  * `whitespace-nowrap`, so with no gutter two adjacent cells render as one word: an amount
- * runs into who asked for it (`750,000.00 IDRbot:orbit-growth`), a step number into its kind
+ * runs into who asked for it (`750.00 USDbot:orbit-growth`), a step number into its kind
  * (`2tool_call`), a token count into its timestamp. The last column is flush right because it
  * is the row's controls or its right-aligned figure and the panel already has its own padding.
  */

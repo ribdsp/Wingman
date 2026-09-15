@@ -79,7 +79,7 @@ func TestASpendUnderTheKillSwitchIsARecordedDenialNotAnError(t *testing.T) {
 		`{"engaged":true,"reason":"reviewing yesterday's spend"}`), http.StatusOK)
 
 	env := decode(t, f.asBot(t, http.MethodPost, "/v1/approvals",
-		`{"actionType":"ads.spend","amount":1000,"currency":"IDR"}`), http.StatusCreated)
+		`{"actionType":"ads.spend","amount":1000,"currency":"USD"}`), http.StatusCreated)
 	var approval approvalView
 	dataInto(t, env, &approval)
 
@@ -280,7 +280,7 @@ func TestOpenOnlyNeedsAnExplicitTrue(t *testing.T) {
 	f := newFixture(t)
 	f.seedPendingApproval(t)
 	decode(t, f.asBot(t, http.MethodPost, "/v1/approvals",
-		`{"actionType":"ads.spend","amount":1000,"currency":"IDR"}`), http.StatusCreated)
+		`{"actionType":"ads.spend","amount":1000,"currency":"USD"}`), http.StatusCreated)
 
 	for _, tc := range []struct {
 		query string
@@ -556,7 +556,7 @@ func TestAPayloadTooLargeIsRefusedBeforeItIsStored(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	body := `{"actionType":"ads.spend","amount":1000,"currency":"IDR","payload":` + string(payload) + `}`
+	body := `{"actionType":"ads.spend","amount":1000,"currency":"USD","payload":` + string(payload) + `}`
 
 	env := decode(t, f.asBot(t, http.MethodPost, "/v1/approvals", body), http.StatusBadRequest)
 	if got := errorCode(t, env); got != utils.ErrCodeValidation {

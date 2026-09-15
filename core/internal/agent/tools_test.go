@@ -138,8 +138,8 @@ func TestRun_aSpend_isFiledWithTheGoalEngineAndRunsWhenAutoApproved(t *testing.T
 	if got.Amount != 1500 {
 		t.Errorf("amount = %v; want 1500", got.Amount)
 	}
-	if got.Currency != "IDR" {
-		t.Errorf("currency = %q; want IDR, as the gate compares it", got.Currency)
+	if got.Currency != "USD" {
+		t.Errorf("currency = %q; want USD, as the gate compares it", got.Currency)
 	}
 	if got.RunID != "run_1" || got.ToolName != "pay_invoice" {
 		t.Errorf("request = %+v; want the run and tool named", got)
@@ -194,7 +194,7 @@ func TestRun_aSpendTheGateDenied_stopsTheRun(t *testing.T) {
 	h := newHarness(t, asksFor(toolCall("call_1", "pay_invoice", map[string]any{"amount": 900000})))
 	h.gate.decision = SpendDecision{
 		Outcome: domain.ApprovalDenied,
-		Reason:  "amount 900000.00 exceeds the hard cap of 500000.00 IDR",
+		Reason:  "amount 900000.00 exceeds the hard cap of 500000.00 USD",
 	}
 
 	// Act

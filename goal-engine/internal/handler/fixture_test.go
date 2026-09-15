@@ -69,7 +69,7 @@ func newFixture(t *testing.T) *fixture {
 		policies: &memPolicies{byAction: map[string]domain.ApprovalPolicy{
 			"ads.spend": {
 				ActionType:       "ads.spend",
-				Currency:         "IDR",
+				Currency:         "USD",
 				AutoApproveBelow: 100_000,
 				DailyCap:         500_000,
 				HardCap:          5_000_000,
@@ -169,7 +169,7 @@ func testRegistry(t *testing.T) *metrics.Registry {
 	body := `metrics:
   - key: acme.mrr
     description: Monthly recurring revenue
-    unit: IDR
+    unit: USD
     source: push
   - key: acme.signups
     description: New signups today
@@ -313,7 +313,7 @@ func (f *fixture) seedGoal(t *testing.T) string {
 // id.
 func (f *fixture) seedPendingApproval(t *testing.T) string {
 	t.Helper()
-	body := `{"actionType":"ads.spend","amount":400000,"currency":"IDR"}`
+	body := `{"actionType":"ads.spend","amount":400000,"currency":"USD"}`
 	env := decode(t, f.asBot(t, http.MethodPost, "/v1/approvals", body), http.StatusCreated)
 	var view approvalView
 	dataInto(t, env, &view)

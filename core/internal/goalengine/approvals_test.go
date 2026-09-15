@@ -18,7 +18,7 @@ func testSpend() SpendRequest {
 	return SpendRequest{
 		ActionType:     "supplier.invoice",
 		Amount:         1500,
-		Currency:       "IDR",
+		Currency:       "USD",
 		IdempotencyKey: "run_1:call_1",
 		Detail:         map[string]string{"runId": "run_1", "toolName": "pay_invoice"},
 	}
@@ -27,7 +27,7 @@ func testSpend() SpendRequest {
 func TestRequestSpend_filesTheCallAsTheGateExpectsIt(t *testing.T) {
 	// Arrange
 	fake, client := newEngine(t, http.StatusCreated,
-		approvalBodyFor("auto_approved", "below the auto-approve threshold of 250000.00 IDR"))
+		approvalBodyFor("auto_approved", "below the auto-approve threshold of 250000.00 USD"))
 
 	// Act
 	decision, err := client.RequestSpend(context.Background(), testSpend())
@@ -44,7 +44,7 @@ func TestRequestSpend_filesTheCallAsTheGateExpectsIt(t *testing.T) {
 	}
 	// The engine's own sentence, not a summary of it. It names the threshold, and that
 	// is what an operator reading the run needs.
-	if !strings.Contains(decision.Reason, "250000.00 IDR") {
+	if !strings.Contains(decision.Reason, "250000.00 USD") {
 		t.Errorf("reason = %q; want the policy's own words", decision.Reason)
 	}
 
@@ -63,8 +63,8 @@ func TestRequestSpend_filesTheCallAsTheGateExpectsIt(t *testing.T) {
 	if body["amount"] != float64(1500) {
 		t.Errorf("amount = %v; want 1500", body["amount"])
 	}
-	if body["currency"] != "IDR" {
-		t.Errorf("currency = %v; want IDR, which is what the policy is compared against", body["currency"])
+	if body["currency"] != "USD" {
+		t.Errorf("currency = %v; want USD, which is what the policy is compared against", body["currency"])
 	}
 	if body["idempotencyKey"] != "run_1:call_1" {
 		t.Errorf("idempotencyKey = %v; want the key derived from the run and the call", body["idempotencyKey"])

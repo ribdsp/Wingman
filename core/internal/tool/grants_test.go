@@ -33,7 +33,7 @@ tools:
     spend:
       actionType: supplier.invoice
       amountArgument: amount
-      currency: idr
+      currency: usd
   - name: delete_customer
     class: write
     enabled: false
@@ -81,9 +81,9 @@ tools:
 		t.Errorf("spend contract = %+v; want the declared action and amount argument", *paying.Spend)
 	}
 	// Upper-cased on the way in, because the goal engine compares the currency
-	// against its policy and would refuse "idr" against a policy written in "IDR".
-	if paying.Spend.Currency != "IDR" {
-		t.Errorf("spend currency = %q; want IDR", paying.Spend.Currency)
+	// against its policy and would refuse "usd" against a policy written in "USD".
+	if paying.Spend.Currency != "USD" {
+		t.Errorf("spend currency = %q; want USD", paying.Spend.Currency)
 	}
 }
 
@@ -234,7 +234,7 @@ func TestLoadGrants_refusesAGrantWithNoUsableClass(t *testing.T) {
 func TestLoadGrants_readsAClassRegardlessOfHowItWasCapitalised(t *testing.T) {
 	// Arrange
 	path := writeGrants(t, "tools:\n  - name: pay_invoice\n    class: SPEND\n"+
-		"    spend:\n      actionType: supplier.invoice\n      amountArgument: amount\n      currency: IDR\n")
+		"    spend:\n      actionType: supplier.invoice\n      amountArgument: amount\n      currency: USD\n")
 
 	// Act
 	grants, err := LoadGrants(path)
@@ -257,8 +257,8 @@ func TestLoadGrants_refusesASpendingToolWithAnIncompleteContract(t *testing.T) {
 	// message names the line, rather than at runtime as a tool that is always denied.
 	cases := map[string]string{
 		"no spend block":     "tools:\n  - name: pay_invoice\n    class: spend\n",
-		"no action type":     "tools:\n  - name: pay_invoice\n    class: spend\n    spend:\n      amountArgument: amount\n      currency: IDR\n",
-		"no amount argument": "tools:\n  - name: pay_invoice\n    class: spend\n    spend:\n      actionType: supplier.invoice\n      currency: IDR\n",
+		"no action type":     "tools:\n  - name: pay_invoice\n    class: spend\n    spend:\n      amountArgument: amount\n      currency: USD\n",
+		"no amount argument": "tools:\n  - name: pay_invoice\n    class: spend\n    spend:\n      actionType: supplier.invoice\n      currency: USD\n",
 		"no currency":        "tools:\n  - name: pay_invoice\n    class: spend\n    spend:\n      actionType: supplier.invoice\n      amountArgument: amount\n",
 		"blank fields":       "tools:\n  - name: pay_invoice\n    class: spend\n    spend:\n      actionType: \"  \"\n      amountArgument: \"  \"\n      currency: \"  \"\n",
 	}
@@ -276,7 +276,7 @@ func TestLoadGrants_refusesASpendContractOnAToolThatDoesNotSpend(t *testing.T) {
 	// Ignored, this would sit in the file as somebody's intention, and whoever later
 	// widened the class would inherit a contract nobody reviewed.
 	body := "tools:\n  - name: read_report\n    class: read\n" +
-		"    spend:\n      actionType: supplier.invoice\n      amountArgument: amount\n      currency: IDR\n"
+		"    spend:\n      actionType: supplier.invoice\n      amountArgument: amount\n      currency: USD\n"
 
 	// Act
 	_, err := LoadGrants(writeGrants(t, body))
@@ -300,7 +300,7 @@ func TestGrants_classify_isTheDomainLadderAndNotASecondOne(t *testing.T) {
 		domain.ToolGrant{Name: "read_report", Class: domain.ToolClassRead, Enabled: true},
 		domain.ToolGrant{Name: "post_message", Class: domain.ToolClassWrite, Enabled: true},
 		domain.ToolGrant{Name: "pay_invoice", Class: domain.ToolClassSpend, Enabled: true,
-			Spend: &domain.ToolSpend{ActionType: "supplier.invoice", AmountArgument: "amount", Currency: "IDR"}},
+			Spend: &domain.ToolSpend{ActionType: "supplier.invoice", AmountArgument: "amount", Currency: "USD"}},
 		domain.ToolGrant{Name: "delete_customer", Class: domain.ToolClassWrite, Enabled: false},
 	)
 

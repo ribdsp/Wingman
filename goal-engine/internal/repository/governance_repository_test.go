@@ -283,7 +283,7 @@ func approvalSQLRows() *sqlmock.Rows {
 
 func addApprovalRow(rows *sqlmock.Rows, outcome string, resolution, resolvedBy any, resolvedAt any) *sqlmock.Rows {
 	return rows.AddRow(
-		"44444444-4444-4444-4444-444444444444", "ads.topup", 750000.0, "IDR", "bot-1",
+		"44444444-4444-4444-4444-444444444444", "ads.topup", 750000.0, "USD", "bot-1",
 		"goal-1", "goal-1:topup:1", outcome, "above auto-approve threshold",
 		resolution, resolvedBy, resolvedAt, "", `{"campaign":"x"}`, testPeriodStart, nil,
 	)
@@ -293,7 +293,7 @@ func testApproval() ApprovalInput {
 	return ApprovalInput{
 		ActionType:     "ads.topup",
 		Amount:         750000,
-		Currency:       "idr",
+		Currency:       "usd",
 		RequestedBy:    "bot-1",
 		IdempotencyKey: "goal-1:topup:1",
 		Outcome:        domain.ApprovalPending,
@@ -308,7 +308,7 @@ func TestApprovalRepositoryCreateNormalisesTheCurrency(t *testing.T) {
 	db, mock := newTestDB(t)
 	repo := NewApprovalRepository(db)
 	mock.ExpectQuery("INSERT INTO approval_requests").
-		WithArgs("ads.topup", 750000.0, "IDR", "bot-1", nil, "goal-1:topup:1",
+		WithArgs("ads.topup", 750000.0, "USD", "bot-1", nil, "goal-1:topup:1",
 			"pending", "above auto-approve threshold", `{"campaign":"x"}`, nil).
 		WillReturnRows(addApprovalRow(approvalSQLRows(), "pending", nil, nil, nil))
 
@@ -316,8 +316,8 @@ func TestApprovalRepositoryCreateNormalisesTheCurrency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected the request to be recorded, got %v", err)
 	}
-	if record.Currency != "IDR" {
-		t.Fatalf("expected IDR, got %q", record.Currency)
+	if record.Currency != "USD" {
+		t.Fatalf("expected USD, got %q", record.Currency)
 	}
 	if !record.IsOpen() {
 		t.Fatalf("expected an open request, got %+v", record)
@@ -334,7 +334,7 @@ func TestApprovalRepositoryCreateLinksAGoalWhenGiven(t *testing.T) {
 	input.ExpiresAt = &expiresAt
 
 	mock.ExpectQuery("INSERT INTO approval_requests").
-		WithArgs("ads.topup", 750000.0, "IDR", "bot-1", "goal-1", "goal-1:topup:1",
+		WithArgs("ads.topup", 750000.0, "USD", "bot-1", "goal-1", "goal-1:topup:1",
 			"pending", "above auto-approve threshold", `{"campaign":"x"}`, expiresAt).
 		WillReturnRows(addApprovalRow(approvalSQLRows(), "pending", nil, nil, nil))
 
@@ -524,13 +524,13 @@ func TestSpendRepositoryWithinActionLockSerialisesTheCapCheck(t *testing.T) {
 		WithArgs(spendLockClass, "ads.topup").
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectQuery("coalesce\\(sum\\(amount\\), 0\\)").
-		WithArgs("ads.topup", testPeriodStart, "IDR").
+		WithArgs("ads.topup", testPeriodStart, "USD").
 		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(1500000.0))
 	mock.ExpectCommit()
 
 	var spent float64
 	err := repo.WithinActionLock(context.Background(), "ads.topup", func(locked SpendLedger) error {
-		total, err := locked.SpentSince(context.Background(), "ads.topup", "idr", testPeriodStart)
+		total, err := locked.SpentSince(context.Background(), "ads.topup", "usd", testPeriodStart)
 		spent = total
 		return err
 	})
@@ -589,13 +589,13 @@ func TestSpendRepositoryRecordStoresACommittedSpend(t *testing.T) {
 	approvalID := "approval-1"
 	occurredAt := time.Date(2026, 9, 11, 9, 0, 0, 0, time.UTC)
 	mock.ExpectQuery("INSERT INTO spend_ledger").
-		WithArgs("ads.topup", 750000.0, "IDR", "approval-1", "bot-1", occurredAt, "topup").
-		WillReturnRows(spendSQLRows().AddRow(1, "ads.topup", 750000.0, "IDR", "approval-1", "bot-1", occurredAt, "topup"))
+		WithArgs("ads.topup", 750000.0, "USD", "approval-1", "bot-1", occurredAt, "topup").
+		WillReturnRows(spendSQLRows().AddRow(1, "ads.topup", 750000.0, "USD", "approval-1", "bot-1", occurredAt, "topup"))
 
 	record, err := repo.Record(context.Background(), SpendInput{
 		ActionType: "ads.topup",
 		Amount:     750000,
-		Currency:   "idr",
+		Currency:   "usd",
 		ApprovalID: &approvalID,
 		BotID:      "bot-1",
 		OccurredAt: occurredAt,
@@ -624,13 +624,13 @@ func TestSpendRepositoryRecordStoresAnUnlinkedSpendAsNull(t *testing.T) {
 	db, mock := newTestDB(t)
 	repo := NewSpendRepository(db)
 	mock.ExpectQuery("INSERT INTO spend_ledger").
-		WithArgs("ads.topup", 1000.0, "IDR", nil, "", sqlmock.AnyArg(), "").
-		WillReturnRows(spendSQLRows().AddRow(2, "ads.topup", 1000.0, "IDR", nil, "", time.Now(), ""))
+		WithArgs("ads.topup", 1000.0, "USD", nil, "", sqlmock.AnyArg(), "").
+		WillReturnRows(spendSQLRows().AddRow(2, "ads.topup", 1000.0, "USD", nil, "", time.Now(), ""))
 
 	record, err := repo.Record(context.Background(), SpendInput{
 		ActionType: "ads.topup",
 		Amount:     1000,
-		Currency:   "IDR",
+		Currency:   "USD",
 	})
 	if err != nil {
 		t.Fatalf("expected the spend to be recorded, got %v", err)

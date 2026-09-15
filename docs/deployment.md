@@ -635,7 +635,7 @@ datasources:
 metrics:
   - key: billing.mrr
     description: Monthly recurring revenue
-    unit: IDR
+    unit: USD
     source: sql
     datasource: billing
     query: |
@@ -748,10 +748,10 @@ When you do add a policy, add one action type, with a small `autoApproveBelow`:
 policies:
   - actionType: ads.spend
     enabled: true
-    currency: IDR
-    autoApproveBelow: 50000      # proceeds without asking
-    dailyCap: 500000             # above this: denied, not queued
-    hardCap: 250000              # any single request above this: denied
+    currency: USD
+    autoApproveBelow: 50         # proceeds without asking
+    dailyCap: 500                # above this: denied, not queued
+    hardCap: 250                 # any single request above this: denied
 ```
 
 The name has to match the `spend.actionType` of the tool in core's `tools.yaml` that

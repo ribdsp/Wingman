@@ -32,7 +32,7 @@ func goalSQLRows() *sqlmock.Rows {
 func addGoalRow(rows *sqlmock.Rows, baseline any) *sqlmock.Rows {
 	return rows.AddRow(
 		"11111111-1111-1111-1111-111111111111", "acme", "Grow MRR",
-		"get MRR to 50M this month", "billing.mrr.idr", "gte",
+		"get MRR to 50M this month", "billing.mrr.usd", "gte",
 		50000000.0, baseline, testPeriodStart, testPeriodEnd, "active",
 		0.05, 21600, 3, "bot-1", "chan-1", "ops", testPeriodStart, testPeriodStart,
 	)
@@ -43,7 +43,7 @@ func testGoal() domain.Goal {
 		Product:              "acme",
 		Title:                "Grow MRR",
 		SourceText:           "get MRR to 50M this month",
-		MetricKey:            "billing.mrr.idr",
+		MetricKey:            "billing.mrr.usd",
 		Comparator:           domain.ComparatorGTE,
 		TargetValue:          50000000,
 		PeriodStart:          testPeriodStart,
@@ -62,7 +62,7 @@ func TestGoalRepositoryCreateStoresAndMapsBack(t *testing.T) {
 	db, mock := newTestDB(t)
 	repo := NewGoalRepository(db)
 	mock.ExpectQuery("INSERT INTO goals").
-		WithArgs("acme", "Grow MRR", "get MRR to 50M this month", "billing.mrr.idr",
+		WithArgs("acme", "Grow MRR", "get MRR to 50M this month", "billing.mrr.usd",
 			"gte", 50000000.0, nil, testPeriodStart, testPeriodEnd, "active",
 			0.05, 21600, 3, "bot-1", "chan-1", "ops").
 		WillReturnRows(addGoalRow(goalSQLRows(), nil))
@@ -99,7 +99,7 @@ func TestGoalRepositoryCreateAppliesDefaults(t *testing.T) {
 	goal.ToleranceRatio = 0
 
 	mock.ExpectQuery("INSERT INTO goals").
-		WithArgs("acme", "Grow MRR", "get MRR to 50M this month", "billing.mrr.idr",
+		WithArgs("acme", "Grow MRR", "get MRR to 50M this month", "billing.mrr.usd",
 			"gte", 50000000.0, nil, testPeriodStart, testPeriodEnd, "active",
 			domain.DefaultToleranceRatio, 21600, 3, "bot-1", "chan-1", "ops").
 		WillReturnRows(addGoalRow(goalSQLRows(), nil))
@@ -117,7 +117,7 @@ func TestGoalRepositoryCreatePassesBaselineWhenSet(t *testing.T) {
 	goal.BaselineValue = &baseline
 
 	mock.ExpectQuery("INSERT INTO goals").
-		WithArgs("acme", "Grow MRR", "get MRR to 50M this month", "billing.mrr.idr",
+		WithArgs("acme", "Grow MRR", "get MRR to 50M this month", "billing.mrr.usd",
 			"gte", 50000000.0, 32000000.0, testPeriodStart, testPeriodEnd, "active",
 			0.05, 21600, 3, "bot-1", "chan-1", "ops").
 		WillReturnRows(addGoalRow(goalSQLRows(), 32000000.0))
@@ -317,11 +317,11 @@ func TestSampleRepositoryInsertRecordsAnObservation(t *testing.T) {
 	repo := NewSampleRepository(db)
 	observedAt := time.Date(2026, 9, 11, 8, 0, 0, 0, time.UTC)
 	mock.ExpectQuery("INSERT INTO metric_samples").
-		WithArgs("billing.mrr.idr", 41000000.0, observedAt, "sql", 250).
-		WillReturnRows(sampleSQLRows().AddRow(1, "billing.mrr.idr", 41000000.0, observedAt, "sql", 250))
+		WithArgs("billing.mrr.usd", 41000000.0, observedAt, "sql", 250).
+		WillReturnRows(sampleSQLRows().AddRow(1, "billing.mrr.usd", 41000000.0, observedAt, "sql", 250))
 
 	record, err := repo.Insert(context.Background(), SampleInput{
-		MetricKey:  "billing.mrr.idr",
+		MetricKey:  "billing.mrr.usd",
 		Value:      41000000,
 		ObservedAt: observedAt,
 		Source:     "sql",
@@ -346,7 +346,7 @@ func TestSampleRepositoryInsertRefusesBrokenValuesWithoutAskingTheDatabase(t *te
 	repo := NewSampleRepository(db)
 
 	for _, value := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
-		if _, err := repo.Insert(context.Background(), SampleInput{MetricKey: "billing.mrr.idr", Value: value}); err == nil {
+		if _, err := repo.Insert(context.Background(), SampleInput{MetricKey: "billing.mrr.usd", Value: value}); err == nil {
 			t.Fatalf("expected %v to be refused", value)
 		}
 	}
@@ -356,10 +356,10 @@ func TestSampleRepositoryInsertDefaultsSourceAndDuration(t *testing.T) {
 	db, mock := newTestDB(t)
 	repo := NewSampleRepository(db)
 	mock.ExpectQuery("INSERT INTO metric_samples").
-		WithArgs("billing.mrr.idr", 1.0, sqlmock.AnyArg(), "monitor", nil).
-		WillReturnRows(sampleSQLRows().AddRow(1, "billing.mrr.idr", 1.0, time.Now(), "monitor", nil))
+		WithArgs("billing.mrr.usd", 1.0, sqlmock.AnyArg(), "monitor", nil).
+		WillReturnRows(sampleSQLRows().AddRow(1, "billing.mrr.usd", 1.0, time.Now(), "monitor", nil))
 
-	record, err := repo.Insert(context.Background(), SampleInput{MetricKey: "billing.mrr.idr", Value: 1})
+	record, err := repo.Insert(context.Background(), SampleInput{MetricKey: "billing.mrr.usd", Value: 1})
 	if err != nil {
 		t.Fatalf("expected the sample to be stored, got %v", err)
 	}
@@ -372,10 +372,10 @@ func TestSampleRepositoryLatestReportsAMissingMetric(t *testing.T) {
 	db, mock := newTestDB(t)
 	repo := NewSampleRepository(db)
 	mock.ExpectQuery("FROM metric_samples").
-		WithArgs("billing.mrr.idr").
+		WithArgs("billing.mrr.usd").
 		WillReturnRows(sampleSQLRows())
 
-	_, err := repo.Latest(context.Background(), "billing.mrr.idr")
+	_, err := repo.Latest(context.Background(), "billing.mrr.usd")
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
@@ -386,10 +386,10 @@ func TestSampleRepositoryListSinceClampsTheLimit(t *testing.T) {
 	repo := NewSampleRepository(db)
 	since := testPeriodStart
 	mock.ExpectQuery("FROM metric_samples").
-		WithArgs("billing.mrr.idr", since, maxPageLimit).
+		WithArgs("billing.mrr.usd", since, maxPageLimit).
 		WillReturnRows(sampleSQLRows())
 
-	if _, err := repo.ListSince(context.Background(), "billing.mrr.idr", since, 10_000); err != nil {
+	if _, err := repo.ListSince(context.Background(), "billing.mrr.usd", since, 10_000); err != nil {
 		t.Fatalf("expected a listing, got %v", err)
 	}
 }

@@ -25,9 +25,9 @@ datasources:
     maxOpenConns: 2
 
 metrics:
-  - key: billing.mrr.idr
+  - key: billing.mrr.usd
     description: Monthly recurring revenue
-    unit: IDR
+    unit: USD
     source: sql
     datasource: billing
     query: SELECT coalesce(sum(amount), 0)::double precision FROM subscriptions WHERE status = 'active'
@@ -56,9 +56,9 @@ func TestLoadReadsValidConfig(t *testing.T) {
 	if registry.Len() != 3 {
 		t.Fatalf("expected 3 metrics, got %d", registry.Len())
 	}
-	def, ok := registry.Get("billing.mrr.idr")
+	def, ok := registry.Get("billing.mrr.usd")
 	if !ok {
-		t.Fatal("expected billing.mrr.idr to be registered")
+		t.Fatal("expected billing.mrr.usd to be registered")
 	}
 	if def.Source != SourceSQL || def.Datasource != "billing" {
 		t.Fatalf("unexpected definition: %+v", def)
@@ -95,7 +95,7 @@ func TestLoadKeysAreSorted(t *testing.T) {
 	}
 
 	got := registry.Keys()
-	want := []string{"billing.mrr.idr", "manual.pipeline.value", "support.csat"}
+	want := []string{"billing.mrr.usd", "manual.pipeline.value", "support.csat"}
 	if len(got) != len(want) {
 		t.Fatalf("expected %d keys, got %v", len(want), got)
 	}

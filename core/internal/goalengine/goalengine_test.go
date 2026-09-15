@@ -62,7 +62,7 @@ func approvalBodyFor(outcome, reason string) string {
     "id": "apr_7",
     "actionType": "supplier.invoice",
     "amount": 1500,
-    "currency": "IDR",
+    "currency": "USD",
     "requestedBy": "bot:wingman-core",
     "goalId": null,
     "idempotencyKey": "run_1:call_1",

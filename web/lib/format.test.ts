@@ -211,9 +211,10 @@ describe('money', () => {
   })
 
   test('the currency the engine sent is shown as sent, not converted or symbolised', () => {
-    // The gate decides in whatever currency the policy names. Rendering IDR as `$` would be
-    // a lie about the amount somebody is being asked to approve.
-    expect(money(50_000, 'idr')).toBe('50,000.00 IDR')
+    // The gate decides in whatever currency the policy names. `USD` is the one code a
+    // formatter is tempted to render as `$`, and that would be a lie about the amount
+    // somebody is being asked to approve — a dollar sign names a dozen currencies.
+    expect(money(50_000, 'usd')).toBe('50,000.00 USD')
     expect(money(50_000, 'ZZZ')).toBe('50,000.00 ZZZ')
   })
 

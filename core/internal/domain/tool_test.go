@@ -15,7 +15,7 @@ func grants() map[string]ToolGrant {
 			Spend: &ToolSpend{
 				ActionType:     "supplier.invoice",
 				AmountArgument: "amount",
-				Currency:       "IDR",
+				Currency:       "USD",
 			},
 		},
 		"delete_customer": {Name: "delete_customer", Class: ToolClassWrite, Enabled: false},

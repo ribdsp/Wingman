@@ -332,7 +332,7 @@ is a separate route on purpose.
 #### `GET /v1/metrics`, `GET /v1/metrics/:key`
 
 ```json
-{ "key": "business.mrr", "description": "Monthly recurring revenue", "unit": "IDR", "source": "push" }
+{ "key": "business.mrr", "description": "Monthly recurring revenue", "unit": "USD", "source": "push" }
 ```
 
 That is the whole view, on purpose. It says nothing about *how* a metric is
@@ -345,7 +345,7 @@ endpoint that reads any database this service can reach.
 Report a value for a `push` metric.
 
 ```json
-{ "value": 47250000, "observedAt": "2026-09-11T18:00:00Z", "note": "billing nightly job" }
+{ "value": 47250, "observedAt": "2026-09-11T18:00:00Z", "note": "billing nightly job" }
 ```
 
 `value` is required and `0` is a real reading — an absent `value` is rejected
@@ -378,8 +378,8 @@ The gate between an agent deciding to spend money and money moving.
 ```json
 {
   "actionType": "ads.spend",
-  "amount": 250000,
-  "currency": "IDR",
+  "amount": 250,
+  "currency": "USD",
   "goalId": "0f8c…",
   "idempotencyKey": "campaign-42-topup-2026-09-11",
   "payload": { "campaignId": "42", "platform": "meta" }
@@ -389,9 +389,9 @@ The gate between an agent deciding to spend money and money moving.
 `201` with one of three outcomes:
 
 ```json
-{ "outcome": "auto_approved", "policyReason": "below the 100000 IDR threshold", "isOpen": false }
-{ "outcome": "pending",       "policyReason": "above the daily cap",             "isOpen": true, "expiresAt": "…" }
-{ "outcome": "denied",        "policyReason": "…",                               "isOpen": false }
+{ "outcome": "auto_approved", "policyReason": "below the 100 USD threshold", "isOpen": false }
+{ "outcome": "pending",       "policyReason": "above the daily cap",         "isOpen": true, "expiresAt": "…" }
+{ "outcome": "denied",        "policyReason": "…",                           "isOpen": false }
 ```
 
 The decision comes from `config/policies.yaml`, and the ladder is deny-biased:
